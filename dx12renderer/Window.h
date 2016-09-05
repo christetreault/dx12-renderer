@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Renderer.h"
+#include "BaseRenderer.h" // TODO
+#include "Timer.h"
 
 namespace dmp
 {
@@ -18,6 +19,7 @@ namespace dmp
       static std::unordered_map<HWND, Window*> windowMap;
    private:
       bool init();
+      void updateTitle();
 
       int mWidth = 800;
       int mHeight = 600;
@@ -25,8 +27,14 @@ namespace dmp
       HWND mhMainWnd = nullptr;
       HINSTANCE mhAppInst = nullptr;
 
-      std::unique_ptr<Renderer> mRenderer = nullptr;
-      
+      std::unique_ptr<BaseRenderer> mRenderer = nullptr;
+      Timer mTimer;
+
+      bool mMinimized = false;
+      bool mMaximized = false;
+      bool mResizing = false;
+
+      bool mReady = false;
    };
 
 }

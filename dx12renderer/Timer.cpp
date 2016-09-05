@@ -17,7 +17,7 @@ dmp::Timer::~Timer()
 
 float dmp::Timer::time() const
 {
-   using asFloat = std::chrono::duration<float>;
+   using asFloat = std::chrono::duration<float, std::chrono::seconds::period>;
 
    // "effective now"
    TimePoint now;

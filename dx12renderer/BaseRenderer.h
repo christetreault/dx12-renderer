@@ -2,12 +2,12 @@
 
 namespace dmp
 {
-   class Renderer
+   class BaseRenderer
    {
    public:
-      Renderer() = delete;
-      Renderer(HWND windowHandle, int width, int height);
-      ~Renderer();
+      BaseRenderer() = delete;
+      BaseRenderer(HWND windowHandle, int width, int height);
+      ~BaseRenderer();
 
       float getAspectRatio() const
       {
@@ -18,6 +18,7 @@ namespace dmp
 
       bool isMsaaEnabled() const { return mMsaaEnabled; }
       void setMsaaState(bool state) { mMsaaEnabled = state; }
+      HRESULT resize(int width, int height, bool force = false); // TODO: W I P
 
       void draw(/* TODO */);
 
@@ -26,8 +27,6 @@ namespace dmp
          (would this be the renderItem thing?) */
 
       // TODO: initialization W I P
-
-      // FPS should be part of window/window's timer
    private:
       void flushCommandQueue(std::function<void()> callback = doNothing);
       ID3D12Resource * currentBackBuffer();
@@ -71,8 +70,6 @@ namespace dmp
 
       Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mRtvHeap;
       Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mDsvHeap;
-
-      HRESULT resize(int width, int height, bool force = false); // TODO: W I P
 
       DXGI_FORMAT mDepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
       Microsoft::WRL::ComPtr<ID3D12Resource> mDepthStencilBuffer;

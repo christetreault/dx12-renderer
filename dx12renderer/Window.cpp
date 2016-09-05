@@ -10,7 +10,8 @@ dmp::Window::Window(HINSTANCE hInstance, int width, int height, std::wstring tit
    , mhAppInst(hInstance)
 {
    expectTrue("create window", init());
-   mRenderer = std::make_unique<Renderer>(mhMainWnd, mWidth, mHeight);
+   mRenderer = std::make_unique<BaseRenderer>(mhMainWnd, mWidth, mHeight);
+   mReady = true;
 }
 
 
@@ -28,77 +29,78 @@ dmp::Window * dmp::Window::getByHWND(HWND key)
 
 LRESULT dmp::Window::wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+   if (!mReady) return DefWindowProc(hwnd, msg, wParam, lParam);
+
    switch (msg)
    {
       case WM_SIZE:
          mWidth = LOWORD(lParam);
          mHeight = HIWORD(lParam);
-         //if (md3dDevice)
-         //{
-         //   if (wParam == SIZE_MINIMIZED)
-         //   {
-         //      mAppPaused = true;
-         //      mMinimized = true;
-         //      mMaximized = false;
-         //   }
-         //   else if (wParam == SIZE_MAXIMIZED)
-         //   {
-         //      mAppPaused = false;
-         //      mMinimized = false;
-         //      mMaximized = true;
-         //      OnResize();
-         //   }
-         //   else if (wParam == SIZE_RESTORED)
-         //   {
 
-         //      // Restoring from minimized state?
-         //      if (mMinimized)
-         //      {
-         //         mAppPaused = false;
-         //         mMinimized = false;
-         //         OnResize();
-         //      }
+         if (wParam == SIZE_MINIMIZED)
+         {
+            mTimer.pause();
+            mMinimized = true;
+            mMaximized = false;
+         }
+         else if (wParam == SIZE_MAXIMIZED)
+         {
+            mTimer.unpause();
+            mMinimized = false;
+            mMaximized = true;
+            mRenderer->resize(mWidth, mHeight);
+         }
+         else if (wParam == SIZE_RESTORED)
+         {
 
-         //      // Restoring from maximized state?
-         //      else if (mMaximized)
-         //      {
-         //         mAppPaused = false;
-         //         mMaximized = false;
-         //         OnResize();
-         //      }
-         //      else if (mResizing)
-         //      {
-         //         // If user is dragging the resize bars, we do not resize 
-         //         // the buffers here because as the user continuously 
-         //         // drags the resize bars, a stream of WM_SIZE messages are
-         //         // sent to the window, and it would be pointless (and slow)
-         //         // to resize for each WM_SIZE message received from dragging
-         //         // the resize bars.  So instead, we reset after the user is 
-         //         // done resizing the window and releases the resize bars, which 
-         //         // sends a WM_EXITSIZEMOVE message.
-         //      }
-         //      else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
-         //      {
-         //         OnResize();
-         //      }
-         //   }
-         //}
+            // Restoring from minimized state?
+            if (mMinimized)
+            {
+               mTimer.unpause();
+               mMinimized = false;
+               mRenderer->resize(mWidth, mHeight);
+            }
+
+            // Restoring from maximized state?
+            else if (mMaximized)
+            {
+               mTimer.unpause();
+               mMaximized = false;
+               mRenderer->resize(mWidth, mHeight);
+            }
+            else if (mResizing)
+            {
+               // If user is dragging the resize bars, we do not resize 
+               // the buffers here because as the user continuously 
+               // drags the resize bars, a stream of WM_SIZE messages are
+               // sent to the window, and it would be pointless (and slow)
+               // to resize for each WM_SIZE message received from dragging
+               // the resize bars.  So instead, we reset after the user is 
+               // done resizing the window and releases the resize bars, which 
+               // sends a WM_EXITSIZEMOVE message.
+            }
+            else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
+            {
+               mRenderer->resize(mWidth, mHeight);
+            }
+         }
+
          return 0;
          // WM_EXITSIZEMOVE is sent when the user grabs the resize bars.
-      //case WM_ENTERSIZEMOVE:
-      //   mAppPaused = true;
-      //   mResizing = true;
-      //   mTimer.Stop();
-      //   return 0;
+      case WM_ENTERSIZEMOVE:
+         mTimer.pause();
+         mResizing = true;
+         mTimer.pause();
+         return 0;
 
-      //   // WM_EXITSIZEMOVE is sent when the user releases the resize bars.
-      //   // Here we reset everything based on the new window dimensions.
-      //case WM_EXITSIZEMOVE:
-      //   mAppPaused = false;
-      //   mResizing = false;
-      //   mTimer.Start();
-      //   OnResize();
-      //   return 0;
+         // WM_EXITSIZEMOVE is sent when the user releases the resize bars.
+         // Here we reset everything based on the new window dimensions.
+      case WM_EXITSIZEMOVE:
+         mTimer.unpause();
+         mResizing = false;
+         mTimer.unpause();
+         mRenderer->resize(mWidth, mHeight);
+         return 0;
       // WM_DESTROY is sent when the window is being destroyed.
       case WM_DESTROY:
          PostQuitMessage(0);
@@ -108,7 +110,7 @@ LRESULT dmp::Window::wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
          ((MINMAXINFO*) lParam)->ptMinTrackSize.x = 200;
          ((MINMAXINFO*) lParam)->ptMinTrackSize.y = 200;
          return 0;
-      default: 
+      default:
          return DefWindowProc(hwnd, msg, wParam, lParam);
    }
 }
@@ -133,7 +135,7 @@ bool dmp::Window::init()
    wc.lpfnWndProc = MainWndProc;
    wc.cbClsExtra = 0;
    wc.cbWndExtra = 0;
-   wc.hInstance = mhAppInst; 
+   wc.hInstance = mhAppInst;
    wc.hIcon = LoadIcon(0, IDI_APPLICATION);
    wc.hCursor = LoadCursor(0, IDC_ARROW);
    wc.hbrBackground = (HBRUSH) GetStockObject(NULL_BRUSH);
@@ -168,11 +170,49 @@ bool dmp::Window::init()
    return true;
 }
 
+void dmp::Window::updateTitle()
+{
+   using namespace std;
+   // Code computes the average frames per second, and also the 
+   // average time it takes to render one frame.  These stats 
+   // are appended to the window caption bar.
+
+   static int frameCnt = 0;
+   static float timeElapsed = 0.0f;
+   float runtime = mTimer.time();
+
+   frameCnt++;
+
+   // Compute averages over one second period.
+   if ((runtime - timeElapsed) >= 1.0f)
+   {
+      float fps = (float) frameCnt; // fps = frameCnt / 1
+      float mspf = 1000.0f / fps;
+
+      wstring fpsStr = to_wstring(fps);
+      wstring mspfStr = to_wstring(mspf);
+      wstring runtimeStr = to_wstring(runtime);
+
+      wstring windowText = mTitle +
+         L"   fps: " + fpsStr +
+         L"   mspf: " + mspfStr +
+         L"   Total Runtime: " + runtimeStr;
+
+
+      SetWindowText(mhMainWnd, windowText.c_str());
+
+      // Reset for next average.
+      frameCnt = 0;
+      timeElapsed += 1.0f;
+   }
+}
+
 int dmp::Window::run()
 {
    MSG msg = {0};
 
-   //mTimer.Reset();
+   mTimer.reset();
+   mTimer.unpause();
 
    while (msg.message != WM_QUIT)
    {
@@ -185,18 +225,18 @@ int dmp::Window::run()
       // Otherwise, do animation/game stuff.
       else
       {
-         //mTimer.Tick();
+         mTimer.tick();
 
-         //if (!mAppPaused)
-         //{
-         //   CalculateFrameStats();
-         //   Update(mTimer);
-         //   Draw(mTimer);
-         //}
-         //else
-         //{
-         //   Sleep(100);
-         //}
+         if (!mTimer.isPaused())
+         {
+            updateTitle();
+            //   Update(mTimer);
+            //   Draw(mTimer);
+         }
+         else
+         {
+            Sleep(100);
+         }
       }
    }
 

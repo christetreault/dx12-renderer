@@ -1,9 +1,9 @@
 #include "stdafx.h"
-#include "Renderer.h"
+#include "BaseRenderer.h"
 
 using Microsoft::WRL::ComPtr;
 
-dmp::Renderer::Renderer(HWND windowHandle, int width, int height)
+dmp::BaseRenderer::BaseRenderer(HWND windowHandle, int width, int height)
    : mWindowHandle(windowHandle), mWidth(width), mHeight(height)
 {
    expectTrue("mWindowHandle not null", mWindowHandle);
@@ -15,12 +15,12 @@ dmp::Renderer::Renderer(HWND windowHandle, int width, int height)
 }
 
 
-dmp::Renderer::~Renderer()
+dmp::BaseRenderer::~BaseRenderer()
 {
    if (mDevice) flushCommandQueue();
 }
 
-void dmp::Renderer::flushCommandQueue(std::function<void()> callback)
+void dmp::BaseRenderer::flushCommandQueue(std::function<void()> callback)
 {
    expectTrue("Fence exists", mFence);
    expectTrue("Command queue exists", mCommandQueue);
@@ -46,12 +46,12 @@ void dmp::Renderer::flushCommandQueue(std::function<void()> callback)
    }
 }
 
-ID3D12Resource * dmp::Renderer::currentBackBuffer()
+ID3D12Resource * dmp::BaseRenderer::currentBackBuffer()
 {
    return mSwapChainBuffers[mCurrentBackBuffer].Get();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE dmp::Renderer::currentBackBufferView() const
+D3D12_CPU_DESCRIPTOR_HANDLE dmp::BaseRenderer::currentBackBufferView() const
 {
    return CD3DX12_CPU_DESCRIPTOR_HANDLE(mRtvHeap
                                         ->GetCPUDescriptorHandleForHeapStart(),
@@ -59,12 +59,12 @@ D3D12_CPU_DESCRIPTOR_HANDLE dmp::Renderer::currentBackBufferView() const
                                         mRtvDescriptorSize);
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE dmp::Renderer::depthStencilView() const
+D3D12_CPU_DESCRIPTOR_HANDLE dmp::BaseRenderer::depthStencilView() const
 {
    return mDsvHeap->GetCPUDescriptorHandleForHeapStart();
 }
 
-bool dmp::Renderer::initBase()
+bool dmp::BaseRenderer::initBase()
 {
 #if defined(DEBUG) || defined(_DEBUG) 
    // Enable the D3D12 debug layer.
@@ -105,7 +105,7 @@ bool dmp::Renderer::initBase()
    return true;
 }
 
-bool dmp::Renderer::initMsaa()
+bool dmp::BaseRenderer::initMsaa()
 {
    D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msql;
    msql.Format = mBackBufferFormat;
@@ -126,7 +126,7 @@ bool dmp::Renderer::initMsaa()
    return true;
 }
 
-bool dmp::Renderer::initCommand()
+bool dmp::BaseRenderer::initCommand()
 {
    D3D12_COMMAND_QUEUE_DESC cqd = {};
    cqd.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -151,11 +151,12 @@ bool dmp::Renderer::initCommand()
                                  nullptr, // TODO: PSO
                                  IID_PPV_ARGS(mCommandList
                                               .ReleaseAndGetAddressOf())));
+   mCommandList->Close();
 
    return true;
 }
 
-bool dmp::Renderer::createDescriptorHeaps()
+bool dmp::BaseRenderer::createDescriptorHeaps()
 {
    D3D12_DESCRIPTOR_HEAP_DESC rhd;
    rhd.NumDescriptors = SWAP_CHAIN_BUFFER_COUNT;
@@ -182,7 +183,7 @@ bool dmp::Renderer::createDescriptorHeaps()
    return true;
 }
 
-HRESULT dmp::Renderer::resize(int width, int height, bool force)
+HRESULT dmp::BaseRenderer::resize(int width, int height, bool force)
 {
    expectTrue("mDevice not null", mDevice);
    expectTrue("mSwapChain not null", mSwapChain);
@@ -200,6 +201,12 @@ HRESULT dmp::Renderer::resize(int width, int height, bool force)
              mCommandList
              ->Reset(mDirectCmdListAlloc.Get(),
                      nullptr)); // TODO: need to update when I make PSO?
+
+   for (int i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+   {
+      mSwapChainBuffers[i].Reset();
+   }
+   mDepthStencilBuffer.Reset();
 
    expectRes("Resize mSwapChain",
              mSwapChain
@@ -287,7 +294,7 @@ HRESULT dmp::Renderer::resize(int width, int height, bool force)
    return S_OK;
 }
 
-HRESULT dmp::Renderer::recreateSwapChain()
+HRESULT dmp::BaseRenderer::recreateSwapChain()
 {
    expectTrue("mWindowHandle not null", mWindowHandle);
    expectTrue("mCommandQueue not null", mCommandQueue);

@@ -21,6 +21,8 @@ namespace dmp
       void unpause();
       void pause();
       void tick();
+
+      bool isPaused() const { return mPaused; }
    private:
       TimePoint mBaseTime;
       TimePoint mPausedTime;
@@ -30,7 +32,7 @@ namespace dmp
 
       Duration mDeltaTime;
 
-      bool mPaused
+      bool mPaused;
 
    };
 }
