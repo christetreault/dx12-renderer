@@ -24,4 +24,9 @@ namespace dmp
    static auto doNothing = []() {};
 
    static const UINT SWAP_CHAIN_BUFFER_COUNT = 2;
+
+   static inline size_t calcConstantBufferByteSize(size_t unaligned)
+   {
+      return (unaligned + 255) & ~255;
+   }
 }

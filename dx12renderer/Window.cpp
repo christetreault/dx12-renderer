@@ -10,7 +10,7 @@ dmp::Window::Window(HINSTANCE hInstance, int width, int height, std::wstring tit
    , mhAppInst(hInstance)
 {
    expectTrue("create window", init());
-   mRenderer = std::make_unique<BaseRenderer>(mhMainWnd, mWidth, mHeight);
+   //mRenderer = std::make_unique<BaseRenderer>(mhMainWnd, mWidth, mHeight);
    mReady = true;
 }
 

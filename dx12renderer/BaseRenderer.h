@@ -7,7 +7,7 @@ namespace dmp
    public:
       BaseRenderer() = delete;
       BaseRenderer(HWND windowHandle, int width, int height);
-      ~BaseRenderer();
+      virtual ~BaseRenderer();
 
       float getAspectRatio() const
       {
@@ -18,15 +18,23 @@ namespace dmp
 
       bool isMsaaEnabled() const { return mMsaaEnabled; }
       void setMsaaState(bool state) { mMsaaEnabled = state; }
-      HRESULT resize(int width, int height, bool force = false); // TODO: W I P
+      virtual HRESULT resize(int width, int height, bool force = false); // TODO: W I P
 
-      void draw(/* TODO */);
+      virtual void draw(/* TODO */) = 0;
 
       /* the renderer shouldn't know about updating geometry. Need a
          separate Geometry class of some sort that can update itself.
          (would this be the renderItem thing?) */
 
       // TODO: initialization W I P
+
+   protected:
+      // derived classes should call this in their constructor
+      void init();
+
+      // this will be called by init and need not be called by the derived class
+      virtual bool initDerived() = 0;
+
    private:
       void flushCommandQueue(std::function<void()> callback = doNothing);
       ID3D12Resource * currentBackBuffer();

@@ -6,12 +6,19 @@ using Microsoft::WRL::ComPtr;
 dmp::BaseRenderer::BaseRenderer(HWND windowHandle, int width, int height)
    : mWindowHandle(windowHandle), mWidth(width), mHeight(height)
 {
+   init();
+}
+
+void dmp::BaseRenderer::init()
+{
    expectTrue("mWindowHandle not null", mWindowHandle);
    expectTrue("Init Renderer Base", initBase());
    expectTrue("Init MSAA", initMsaa());
    expectTrue("Init command objects", initCommand());
    expectRes("Init swapchain", recreateSwapChain());
    expectTrue("Create Descriptor Heaps", createDescriptorHeaps());
+
+   expectTrue("Init derived renderer", initDerived());
 }
 
 
@@ -151,7 +158,7 @@ bool dmp::BaseRenderer::initCommand()
                                  nullptr, // TODO: PSO
                                  IID_PPV_ARGS(mCommandList
                                               .ReleaseAndGetAddressOf())));
-   mCommandList->Close();
+   mCommandList->Close(); // TODO: do I need to to this?
 
    return true;
 }
