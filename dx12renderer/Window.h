@@ -1,6 +1,8 @@
 #pragma once
 
-#include "BaseRenderer.h" // TODO
+#define RendererType BasicRenderer
+
+#include "BasicRenderer.h" // TODO
 #include "Timer.h"
 
 namespace dmp
@@ -27,7 +29,7 @@ namespace dmp
       HWND mhMainWnd = nullptr;
       HINSTANCE mhAppInst = nullptr;
 
-      std::unique_ptr<BaseRenderer> mRenderer = nullptr;
+      std::unique_ptr<RendererType> mRenderer = nullptr;
       Timer mTimer;
 
       bool mMinimized = false;

@@ -14,6 +14,7 @@ namespace dmp
       BYTE * mData;
       bool valid = false;
    public:
+      UploadBuffer() = default;
       UploadBuffer(ID3D12Device * dev, size_t count)
          : mSizeofT(sizeof(T))
       {
@@ -26,7 +27,7 @@ namespace dmp
       void init(ID3D12Device * dev, size_t count)
       {
          expectRes("Create the Upload Buffer",
-                   dev->CreateCommittedResource(&D3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+                   dev->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
                                                 D3D12_HEAP_FLAG_NONE,
                                                 &CD3DX12_RESOURCE_DESC::Buffer(mSizeofT * count),
                                                 D3D12_RESOURCE_STATE_GENERIC_READ,
@@ -40,7 +41,7 @@ namespace dmp
          valid = true;
       }
 
-      ~UploadBuffer()
+      virtual ~UploadBuffer()
       {
          if (mUploadBuffer != nullptr)
          {
@@ -63,11 +64,12 @@ namespace dmp
    };
 
    template <typename T> class
-      ConstantUploadBuffer : UploadBuffer
+      ConstantUploadBuffer : public UploadBuffer<T>
    {
+   public:
       ConstantUploadBuffer(ID3D12Device * dev, size_t count)
-         : mSizeofT(calcConstantBufferByteSize(sizeof(T)))
       {
+         mSizeofT = calcConstantBufferByteSize(sizeof(T));
          init(dev, count);
       }
    };

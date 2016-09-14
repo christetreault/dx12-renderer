@@ -6,11 +6,12 @@ using Microsoft::WRL::ComPtr;
 dmp::BaseRenderer::BaseRenderer(HWND windowHandle, int width, int height)
    : mWindowHandle(windowHandle), mWidth(width), mHeight(height)
 {
-   init();
 }
 
 void dmp::BaseRenderer::init()
 {
+   expectTrue("init preHook", initPre());
+
    expectTrue("mWindowHandle not null", mWindowHandle);
    expectTrue("Init Renderer Base", initBase());
    expectTrue("Init MSAA", initMsaa());
@@ -18,8 +19,13 @@ void dmp::BaseRenderer::init()
    expectRes("Init swapchain", recreateSwapChain());
    expectTrue("Create Descriptor Heaps", createDescriptorHeaps());
 
-   expectTrue("Init derived renderer", initDerived());
+   expectTrue("init impl", initImpl());
+   expectTrue("init postHook", initPost());
+
+   mReady = true;
+   resize(mWidth, mHeight, true);
 }
+
 
 
 dmp::BaseRenderer::~BaseRenderer()
@@ -190,16 +196,45 @@ bool dmp::BaseRenderer::createDescriptorHeaps()
    return true;
 }
 
+void dmp::BaseRenderer::update(const Timer & t)
+{
+   expectTrue("Update prehook", updatePre(t));
+
+   expectTrue("Update implementation", updateImpl(t));
+
+   expectTrue("Update posthook", updatePost(t));
+}
+
+void dmp::BaseRenderer::draw()
+{
+   if (!mReady) return;
+   expectRes("Draw prehook", drawPre());
+
+   expectRes("Draw implementation", drawImpl());
+
+   expectRes("Draw posthook", drawPost());
+}
+
 HRESULT dmp::BaseRenderer::resize(int width, int height, bool force)
 {
+   expectTrue("Renderer is ready", mReady);
    expectTrue("mDevice not null", mDevice);
    expectTrue("mSwapChain not null", mSwapChain);
    expectTrue("mWindowHandle not null", mWindowHandle);
    expectTrue("mDirectCmdListAlloc not null", mDirectCmdListAlloc);
 
+   expectRes("resize preHook", resizePre(width, height, force));
+   expectRes("resize impl", resizeImpl(width, height, force));
+   expectRes("resize postHook", resizePost(width, height, force));
+
+   return S_OK;
+}
+
+HRESULT dmp::BaseRenderer::resizeImpl(int width, int height, bool force)
+{
    // make sure the size actually changed
    if (width == mWidth && height == mHeight && !force) return S_OK;
-   
+
    mWidth = width;
    mHeight = height;
 
@@ -231,7 +266,7 @@ HRESULT dmp::BaseRenderer::resize(int width, int height, bool force)
    {
       expectRes("Get swapChainBuffer[i]",
                 mSwapChain
-                ->GetBuffer(i, 
+                ->GetBuffer(i,
                             IID_PPV_ARGS(mSwapChainBuffers[i]
                                          .ReleaseAndGetAddressOf())));
 
@@ -284,7 +319,7 @@ HRESULT dmp::BaseRenderer::resize(int width, int height, bool force)
              mCommandList->Close());
 
    std::array<ID3D12CommandList *, 1>  commandLists = {mCommandList.Get()};
-   mCommandQueue->ExecuteCommandLists(static_cast<UINT>(commandLists.size()), 
+   mCommandQueue->ExecuteCommandLists(static_cast<UINT>(commandLists.size()),
                                       commandLists.data());
 
    flushCommandQueue();

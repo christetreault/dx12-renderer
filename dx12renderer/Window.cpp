@@ -3,14 +3,17 @@
 
 std::unordered_map<HWND, dmp::Window*> dmp::Window::windowMap;
 
-dmp::Window::Window(HINSTANCE hInstance, int width, int height, std::wstring title)
+dmp::Window::Window(HINSTANCE hInstance, 
+                    int width, 
+                    int height, 
+                    std::wstring title)
    : mWidth(width)
    , mHeight(height)
    , mTitle(title)
    , mhAppInst(hInstance)
 {
    expectTrue("create window", init());
-   //mRenderer = std::make_unique<BaseRenderer>(mhMainWnd, mWidth, mHeight);
+   mRenderer = std::make_unique<RendererType>(mhMainWnd, mWidth, mHeight);
    mReady = true;
 }
 
@@ -25,94 +28,6 @@ dmp::Window * dmp::Window::getByHWND(HWND key)
    if (i != windowMap.end()) return i->second;
 
    return nullptr;
-}
-
-LRESULT dmp::Window::wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-   if (!mReady) return DefWindowProc(hwnd, msg, wParam, lParam);
-
-   switch (msg)
-   {
-      case WM_SIZE:
-         mWidth = LOWORD(lParam);
-         mHeight = HIWORD(lParam);
-
-         if (wParam == SIZE_MINIMIZED)
-         {
-            mTimer.pause();
-            mMinimized = true;
-            mMaximized = false;
-         }
-         else if (wParam == SIZE_MAXIMIZED)
-         {
-            mTimer.unpause();
-            mMinimized = false;
-            mMaximized = true;
-            mRenderer->resize(mWidth, mHeight);
-         }
-         else if (wParam == SIZE_RESTORED)
-         {
-
-            // Restoring from minimized state?
-            if (mMinimized)
-            {
-               mTimer.unpause();
-               mMinimized = false;
-               mRenderer->resize(mWidth, mHeight);
-            }
-
-            // Restoring from maximized state?
-            else if (mMaximized)
-            {
-               mTimer.unpause();
-               mMaximized = false;
-               mRenderer->resize(mWidth, mHeight);
-            }
-            else if (mResizing)
-            {
-               // If user is dragging the resize bars, we do not resize 
-               // the buffers here because as the user continuously 
-               // drags the resize bars, a stream of WM_SIZE messages are
-               // sent to the window, and it would be pointless (and slow)
-               // to resize for each WM_SIZE message received from dragging
-               // the resize bars.  So instead, we reset after the user is 
-               // done resizing the window and releases the resize bars, which 
-               // sends a WM_EXITSIZEMOVE message.
-            }
-            else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
-            {
-               mRenderer->resize(mWidth, mHeight);
-            }
-         }
-
-         return 0;
-         // WM_EXITSIZEMOVE is sent when the user grabs the resize bars.
-      case WM_ENTERSIZEMOVE:
-         mTimer.pause();
-         mResizing = true;
-         mTimer.pause();
-         return 0;
-
-         // WM_EXITSIZEMOVE is sent when the user releases the resize bars.
-         // Here we reset everything based on the new window dimensions.
-      case WM_EXITSIZEMOVE:
-         mTimer.unpause();
-         mResizing = false;
-         mTimer.unpause();
-         mRenderer->resize(mWidth, mHeight);
-         return 0;
-      // WM_DESTROY is sent when the window is being destroyed.
-      case WM_DESTROY:
-         PostQuitMessage(0);
-         return 0;
-         // Catch this message so to prevent the window from becoming too small.
-      case WM_GETMINMAXINFO:
-         ((MINMAXINFO*) lParam)->ptMinTrackSize.x = 200;
-         ((MINMAXINFO*) lParam)->ptMinTrackSize.y = 200;
-         return 0;
-      default:
-         return DefWindowProc(hwnd, msg, wParam, lParam);
-   }
 }
 
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -207,6 +122,94 @@ void dmp::Window::updateTitle()
    }
 }
 
+LRESULT dmp::Window::wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+   if (!mReady) return DefWindowProc(hwnd, msg, wParam, lParam);
+
+   switch (msg)
+   {
+      case WM_SIZE:
+         mWidth = LOWORD(lParam);
+         mHeight = HIWORD(lParam);
+
+         if (wParam == SIZE_MINIMIZED)
+         {
+            mTimer.pause();
+            mMinimized = true;
+            mMaximized = false;
+         }
+         else if (wParam == SIZE_MAXIMIZED)
+         {
+            mTimer.unpause();
+            mMinimized = false;
+            mMaximized = true;
+            mRenderer->resize(mWidth, mHeight);
+         }
+         else if (wParam == SIZE_RESTORED)
+         {
+
+            // Restoring from minimized state?
+            if (mMinimized)
+            {
+               mTimer.unpause();
+               mMinimized = false;
+               mRenderer->resize(mWidth, mHeight);
+            }
+
+            // Restoring from maximized state?
+            else if (mMaximized)
+            {
+               mTimer.unpause();
+               mMaximized = false;
+               mRenderer->resize(mWidth, mHeight);
+            }
+            else if (mResizing)
+            {
+               // If user is dragging the resize bars, we do not resize 
+               // the buffers here because as the user continuously 
+               // drags the resize bars, a stream of WM_SIZE messages are
+               // sent to the window, and it would be pointless (and slow)
+               // to resize for each WM_SIZE message received from dragging
+               // the resize bars.  So instead, we reset after the user is 
+               // done resizing the window and releases the resize bars, which 
+               // sends a WM_EXITSIZEMOVE message.
+            }
+            else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
+            {
+               mRenderer->resize(mWidth, mHeight);
+            }
+         }
+
+         return 0;
+         // WM_EXITSIZEMOVE is sent when the user grabs the resize bars.
+      case WM_ENTERSIZEMOVE:
+         mTimer.pause();
+         mResizing = true;
+         mTimer.pause();
+         return 0;
+
+         // WM_EXITSIZEMOVE is sent when the user releases the resize bars.
+         // Here we reset everything based on the new window dimensions.
+      case WM_EXITSIZEMOVE:
+         mTimer.unpause();
+         mResizing = false;
+         mTimer.unpause();
+         mRenderer->resize(mWidth, mHeight);
+         return 0;
+         // WM_DESTROY is sent when the window is being destroyed.
+      case WM_DESTROY:
+         PostQuitMessage(0);
+         return 0;
+         // Catch this message so to prevent the window from becoming too small.
+      case WM_GETMINMAXINFO:
+         ((MINMAXINFO*) lParam)->ptMinTrackSize.x = 200;
+         ((MINMAXINFO*) lParam)->ptMinTrackSize.y = 200;
+         return 0;
+      default:
+         return DefWindowProc(hwnd, msg, wParam, lParam);
+   }
+}
+
 int dmp::Window::run()
 {
    MSG msg = {0};
@@ -230,8 +233,8 @@ int dmp::Window::run()
          if (!mTimer.isPaused())
          {
             updateTitle();
-            //   Update(mTimer);
-            //   Draw(mTimer);
+            mRenderer->update(mTimer);
+            mRenderer->draw();
          }
          else
          {

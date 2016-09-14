@@ -13,9 +13,13 @@
 
 // Microsoft headers
 #include "d3dx12.h"
+#include "SimpleMath.h"
 #include <wrl.h>
 #include <windows.h>
 #include <DXGI1_4.h>
+#include <DirectXMath.h>
+#include <d3dcompiler.h>
+#include <DirectXColors.h>
 
 // STL headers
 #include <string>
@@ -25,6 +29,8 @@
 #include <limits>
 #include <functional>
 #include <array>
+#include <unordered_map>
+#include <numeric>
 
 // DMP headers
 #include "Util.h"

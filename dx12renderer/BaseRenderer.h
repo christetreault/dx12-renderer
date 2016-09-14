@@ -1,11 +1,13 @@
 #pragma once
 
+#include "Timer.h"
+
 namespace dmp
 {
    class BaseRenderer
    {
    public:
-      BaseRenderer() = delete;
+      BaseRenderer() {}
       BaseRenderer(HWND windowHandle, int width, int height);
       virtual ~BaseRenderer();
 
@@ -18,24 +20,44 @@ namespace dmp
 
       bool isMsaaEnabled() const { return mMsaaEnabled; }
       void setMsaaState(bool state) { mMsaaEnabled = state; }
-      virtual HRESULT resize(int width, int height, bool force = false); // TODO: W I P
 
-      virtual void draw(/* TODO */) = 0;
+      HRESULT resize(int width, int height, bool force = false);
 
-      /* the renderer shouldn't know about updating geometry. Need a
-         separate Geometry class of some sort that can update itself.
-         (would this be the renderItem thing?) */
+      void draw();
 
-      // TODO: initialization W I P
+      void update(const Timer & t);
 
    protected:
+
+      // update hooks
+      virtual bool updatePre(const Timer & t) { return true; }
+      virtual bool updateImpl(const Timer & t) { return true; }
+      virtual bool updatePost(const Timer & t) { return true; }
+
+      // resize hooks
+      virtual HRESULT resizePre(int width, int height, bool force = false) { return S_OK; }
+      virtual HRESULT resizeImpl(int width, int height, bool force = false);
+      virtual HRESULT resizePost(int width, int height, bool force = false) { return S_OK; }
+
+      // draw hooks
+      virtual HRESULT drawPre() { return S_OK; }
+      virtual HRESULT drawImpl() = 0;
+      virtual HRESULT drawPost() { return S_OK; }
+
       // derived classes should call this in their constructor
       void init();
 
       // this will be called by init and need not be called by the derived class
-      virtual bool initDerived() = 0;
+      virtual bool initPre() { return true; }
+      virtual bool initImpl() = 0;
+      virtual bool initPost() { return true; }
 
-   private:
+      HRESULT recreateSwapChain();
+
+      bool createDescriptorHeaps(); // TODO: candidate for virtual
+
+      // fields
+
       void flushCommandQueue(std::function<void()> callback = doNothing);
       ID3D12Resource * currentBackBuffer();
       D3D12_CPU_DESCRIPTOR_HANDLE currentBackBufferView() const;
@@ -44,8 +66,6 @@ namespace dmp
       HWND mWindowHandle;
       int mWidth;
       int mHeight;
-
-      bool initBase();
 
       Microsoft::WRL::ComPtr<ID3D12Device> mDevice;
       Microsoft::WRL::ComPtr<IDXGIFactory4> mDXGIFactory;
@@ -56,25 +76,17 @@ namespace dmp
       UINT mDsvDescriptorSize = 0;
       UINT mCbvSrvUavDescriptorSize = 0;
 
-      bool initMsaa();
-
       DXGI_FORMAT mBackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
       UINT mMsaaQualityLevel = 0;
       bool mMsaaEnabled = false;
-
-      bool initCommand();
 
       Microsoft::WRL::ComPtr<ID3D12CommandQueue> mCommandQueue;
       Microsoft::WRL::ComPtr<ID3D12CommandAllocator> mDirectCmdListAlloc;
       Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> mCommandList;
 
-      HRESULT recreateSwapChain();
-
       Microsoft::WRL::ComPtr<IDXGISwapChain> mSwapChain;
       UINT mCurrentBackBuffer = 0;
       std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, SWAP_CHAIN_BUFFER_COUNT> mSwapChainBuffers;
-
-      bool createDescriptorHeaps(); // TODO: W I P
 
       Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mRtvHeap;
       Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mDsvHeap;
@@ -83,5 +95,11 @@ namespace dmp
       Microsoft::WRL::ComPtr<ID3D12Resource> mDepthStencilBuffer;
       D3D12_VIEWPORT mViewport;
       D3D12_RECT mScissorRect;
-   };
+
+   private:
+      bool mReady = false;
+      bool initBase();
+      bool initMsaa();
+      bool initCommand();
+ };
 }
