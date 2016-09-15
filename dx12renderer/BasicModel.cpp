@@ -10,9 +10,63 @@
 using namespace dmp;
 using namespace Assimp;
 
-static void processMesh(std::vector<MeshData<BasicVertex>> & retval, aiMesh * mesh)
+static DirectX::SimpleMath::Vector4 colorToVec4(const aiColor3D & color)
+{
+   return DirectX::SimpleMath::Vector4(color.r, color.g, color.b, 1.0f);
+}
+
+static void processMesh(std::vector<MeshData<BasicVertex>> & models, 
+                        std::vector<BasicMaterial> & mats,
+                        aiMesh * mesh,
+                        const aiScene * scene)
 {
    using namespace DirectX::SimpleMath;
+
+   // material
+
+   auto material = scene->mMaterials[mesh->mMaterialIndex];
+
+   aiColor3D ambient;
+   material->Get(AI_MATKEY_COLOR_AMBIENT, ambient);
+
+   aiColor3D diffuse;
+   material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
+
+   aiColor3D specular;
+   material->Get(AI_MATKEY_COLOR_SPECULAR, specular);
+
+   float shininess = 1.0f;
+   material->Get(AI_MATKEY_SHININESS, shininess);
+
+   // TODO: handle the fact that models don't all use phong shading
+
+   BasicMaterial mat;
+   mat.ambient = colorToVec4(ambient);
+   mat.diffuse = colorToVec4(diffuse);
+   mat.specular = colorToVec4(specular);
+   mat.shininess = shininess;
+
+   if (std::find(mats.begin(), mats.end(), mat) == mats.end())
+   {
+      mats.push_back(mat);
+   }
+
+   size_t matIndex = 0;
+   bool matFound = false;
+
+   for (matIndex = 0; matIndex < mats.size(); ++matIndex)
+   {
+      if (mats[matIndex] == mat)
+      {
+         matFound = true;
+         break;
+      }
+   }
+
+   expectTrue("found the material in the memo", matFound);
+
+   // model
+
    std::vector<BasicVertex> verts(0);
    std::vector<uint16_t> idxs(0);
 
@@ -41,26 +95,31 @@ static void processMesh(std::vector<MeshData<BasicVertex>> & retval, aiMesh * me
       }
    }
 
-   MeshData<BasicVertex> md(verts, idxs);
+   MeshData<BasicVertex> md(verts, idxs, matIndex);
 
-   retval.push_back(md);
+   models.push_back(md);
 }
 
-static void processNode(std::vector<MeshData<BasicVertex>> & retval, aiNode * node, const aiScene * scene)
+static void processNode(std::vector<MeshData<BasicVertex>> & models, 
+                        std::vector<BasicMaterial> & mats,
+                        aiNode * node, 
+                        const aiScene * scene)
 {
    for (size_t i = 0; i < node->mNumMeshes; ++i)
    {
       aiMesh * mesh = scene->mMeshes[node->mMeshes[i]];
-      processMesh(retval, mesh);
+      processMesh(models, mats, mesh, scene);
    }
 
    for (size_t i = 0; i < node->mNumChildren; ++i)
    {
-      processNode(retval, node->mChildren[i], scene);
+      processNode(models, mats, node->mChildren[i], scene);
    }
 }
 
-std::vector<MeshData<BasicVertex>> dmp::loadModel(const std::string & filename)
+void dmp::loadModel(const std::string & filename,
+                    std::vector<MeshData<BasicVertex>> & models,
+                    std::vector<BasicMaterial> & mats)
 {
    Importer imp;
    imp.SetPropertyBool(AI_CONFIG_PP_PTV_NORMALIZE, true);
@@ -87,7 +146,5 @@ std::vector<MeshData<BasicVertex>> dmp::loadModel(const std::string & filename)
    
    std::vector<MeshData<BasicVertex>> retval;
 
-   processNode(retval, scene->mRootNode, scene);
-
-   return retval;
+   processNode(models, mats, scene->mRootNode, scene);
 }

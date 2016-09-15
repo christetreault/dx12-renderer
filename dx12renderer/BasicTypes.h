@@ -32,13 +32,29 @@ namespace dmp
       DirectX::SimpleMath::Matrix M;
    };
 
+   struct BasicMaterial
+   {
+      DirectX::SimpleMath::Vector4 ambient;
+      DirectX::SimpleMath::Vector4 diffuse;
+      DirectX::SimpleMath::Vector4 specular;
+      float shininess;
+
+      bool operator==(const BasicMaterial & rhs)
+      {
+         return ambient == rhs.ambient
+            && specular == rhs.specular
+            && diffuse == rhs.diffuse
+            && shininess == rhs.shininess;
+      }
+   };
+
    struct BasicRenderItem
    {
       DirectX::SimpleMath::Matrix M = DirectX::SimpleMath::Matrix::Identity;
 
       UINT framesDirty = FRAME_RESOURCES_COUNT;
 
-      // no object count because there is only 1 object
+      UINT cbIndex = 0;
 
       MeshBuffer<BasicVertex, uint16_t> * meshBuffer = nullptr;
 
@@ -47,5 +63,6 @@ namespace dmp
       UINT indexCount = 0;
       UINT startIndexLocation = 0;
       int baseVertexLocation = 0;
+      size_t matIndex = 0;
    };
 }

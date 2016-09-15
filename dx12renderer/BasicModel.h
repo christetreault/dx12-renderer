@@ -7,5 +7,7 @@ namespace dmp
    template <typename VertexT> class MeshData;
    struct BasicVertex;
 
-   std::vector<MeshData<BasicVertex>> loadModel(const std::string & filename);
+   void loadModel(const std::string & filename, 
+                  std::vector<MeshData<BasicVertex>> & models,
+                  std::vector<BasicMaterial> & mats);
 }

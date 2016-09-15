@@ -36,14 +36,16 @@ namespace dmp
       bool buildMeshBuffer();
       std::unique_ptr<MeshBuffer<BasicVertex, uint16_t>> mMeshBuffer = nullptr;
 
-      bool buildRenderItems(); // just one today
-      std::vector<std::unique_ptr<BasicRenderItem>> mVger;
+      bool buildRenderItems();
+      std::vector<std::unique_ptr<BasicRenderItem>> mRItems;
+      std::vector<BasicMaterial> mMats;
 
       bool buildFrameResources();
-      std::vector<std::unique_ptr<FrameResource<BasicPassConstants, BasicObjectConstants>>> mFrameResources;
+      std::vector<std::unique_ptr<FrameResource<BasicPassConstants, BasicMaterial, BasicObjectConstants>>> mFrameResources;
 
       bool buildCBVDescriptorHeaps();
       Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mCBVHeap = nullptr;
+      UINT mMatsCBVOffset = 0;
       UINT mPassCBVOffset = 0;
 
       bool buildConstantBufferViews();
@@ -54,7 +56,7 @@ namespace dmp
       const std::string wireframeKey = "wireframe";
 
       bool updatePre(const Timer & t) override;
-      FrameResource<BasicPassConstants, BasicObjectConstants> * mCurrFrameResource = nullptr;
+      FrameResource<BasicPassConstants, BasicMaterial, BasicObjectConstants> * mCurrFrameResource = nullptr;
       int mCurrFrameResourceIndex = 0;
 
       bool updateImpl(const Timer & t) override;

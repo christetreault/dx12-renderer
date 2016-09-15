@@ -3,7 +3,15 @@ cbuffer objectCB : register(b0)
    float4x4 M;
 };
 
-cbuffer passCB : register(b1)
+cbuffer materialCB : register(b1)
+{
+   float4 ambient;
+   float4 diffuse;
+   float4 specular;
+   float shininess;
+}
+
+cbuffer passCB : register(b2)
 {
    float4x4 V;
    float4x4 inverseV;
@@ -40,15 +48,14 @@ PixelIn vertexShader(VertexIn vin)
 {
    PixelIn pin;
 
-   float squimbler = cos(totalTime);
-   squimbler = mapRange(squimbler, 0.0f, 1.0f, 0.3f, 0.7f);
+   float squimbler = cos(totalTime * 2.0f);
+   //squimbler = mapRange(squimbler, 0.0f, 1.0f, 0.3f, 0.7f);
 
    float4x4 PVM = mul(M, PV);
    float4 colorLow = normalize(mul(vin.color, PVM));
-   float4 colorHigh = 2 * colorLow;
 
    pin.pos = mul(vin.pos, PVM);
-   pin.color = lerp(colorLow, colorHigh, squimbler);
+   pin.color = lerp(colorLow, diffuse, squimbler);
 
    return pin;
 }

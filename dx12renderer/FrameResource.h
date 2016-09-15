@@ -4,11 +4,12 @@
 
 namespace dmp
 {
-   template <typename PassConstantT, typename ObjectConstantT>
+   template <typename PassConstantT, typename MaterialConstantT, typename ObjectConstantT>
    struct FrameResource
    {
-      FrameResource(ID3D12Device * dev, size_t passCount, size_t objCount) : 
-         passCB(std::make_unique<ConstantUploadBuffer<PassConstantT>>(dev, passCount)), 
+      FrameResource(ID3D12Device * dev, size_t passCount, size_t matCount, size_t objCount) : 
+         passCB(std::make_unique<ConstantUploadBuffer<PassConstantT>>(dev, passCount)),
+         materialCB(std::make_unique<ConstantUploadBuffer<MaterialConstantT>>(dev, matCount)),
          objectCB(std::make_unique<ConstantUploadBuffer<ObjectConstantT>>(dev, objCount))
       {
          expectRes("Create Frame Resource Command Allocator",
@@ -26,6 +27,7 @@ namespace dmp
       uint64_t fenceVal = 0;
       
       std::unique_ptr<ConstantUploadBuffer<PassConstantT>> passCB;
+      std::unique_ptr<ConstantUploadBuffer<MaterialConstantT>> materialCB;
       std::unique_ptr<ConstantUploadBuffer<ObjectConstantT>> objectCB;
    };
 }

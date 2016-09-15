@@ -9,18 +9,19 @@ namespace dmp
       size_t indexCount = 0;
       size_t startIndexOffset = 0;
       size_t startVertexOffset = 0;
+      size_t matIndex = 0;
    };
 
    template <typename VertexT>
    class MeshData
    {
    public:
-      MeshData(const std::vector<VertexT> & verts, std::string name = "") :
-         mName(name), mVerts(verts), mIndexed(false) {}
-      MeshData(const std::vector<VertexT> & verts, const std::vector<uint16_t> i16, std::string name = "") :
-         mName(name), mVerts(verts), mI16(i16), mIndexed(true) {}
-      MeshData(const std::vector<VertexT> & verts, const std::vector<uint32_t> i32, std::string name = "") :
-         mName(name), mVerts(verts), mI32(i32), mIndexed(true) {}
+      MeshData(const std::vector<VertexT> & verts, size_t matIndex) :
+         mVerts(verts), mIndexed(false), mMatIndex(matIndex) {}
+      MeshData(const std::vector<VertexT> & verts, const std::vector<uint16_t> i16, size_t matIndex) :
+         mVerts(verts), mI16(i16), mIndexed(true), mMatIndex(matIndex) {}
+      MeshData(const std::vector<VertexT> & verts, const std::vector<uint32_t> i32, size_t matIndex) :
+         mVerts(verts), mI32(i32), mIndexed(true), mMatIndex(matIndex) {}
 
       bool isIndexed() const
       {
@@ -29,8 +30,6 @@ namespace dmp
          return mIndexed;
       }
 
-      const std::string & getName() const { return mName; }
-      void setName(const std::string & name) { mName = name; }
 
       const std::vector<VertexT> & getVerts()
       {
@@ -66,12 +65,15 @@ namespace dmp
 
          return mI32;
       }
+
+      size_t getMatIndex() { return mMatIndex; }
+
    private:
-      std::string mName;
       bool mIndexed = false;
       std::vector<VertexT> mVerts;
       std::vector<uint16_t> mI16;
       std::vector<uint32_t> mI32;
+      size_t mMatIndex;
    };
 
    template <typename VertexT, typename IndexT>
@@ -80,11 +82,9 @@ namespace dmp
    public:
       MeshBuffer() = default;
 
-      MeshBuffer(const std::string & name,
-                 std::vector<MeshData<VertexT>> verts,
+      MeshBuffer(const std::vector<MeshData<VertexT>> & verts,
                  ID3D12Device * dev,
-                 ID3D12GraphicsCommandList * clist) :
-         mName(name)
+                 ID3D12GraphicsCommandList * clist)
       {
          if (std::is_same<IndexT, uint16_t>::value)
          {
@@ -100,8 +100,6 @@ namespace dmp
       }
 
       ~MeshBuffer() {}
-
-      const std::string & name() const { return mName; }
       
       D3D12_VERTEX_BUFFER_VIEW vertexBufferView() const
       {
@@ -124,23 +122,23 @@ namespace dmp
       }
 
    private:
-      void init(std::vector<MeshData<VertexT>> verts, 
+      void init(const std::vector<MeshData<VertexT>> & verts, 
                 ID3D12Device * dev,
                 ID3D12GraphicsCommandList * clist)
       {
          size_t indexOffset = 0;
          size_t vertexOffset = 0;
 
-         for (MeshData<VertexT> & curr : verts)
+         for (MeshData<VertexT> curr : verts)
          {
-            if (curr.getName() == "") continue;
 
             SubMesh sm;
             sm.indexCount = curr.getI16().size();
             sm.startIndexOffset = indexOffset;
             sm.startVertexOffset = vertexOffset;
+            sm.matIndex = curr.getMatIndex();
          
-            mSubMeshes[curr.getName()] = sm;
+            mSubMeshes.push_back(sm);
 
             indexOffset = indexOffset + curr.getI16().size();
             vertexOffset = vertexOffset + curr.getVerts().size();
@@ -151,7 +149,7 @@ namespace dmp
          std::vector<IndexT> allIdxs(0);
          
 
-         for (MeshData<VertexT> & curr : verts)
+         for (MeshData<VertexT> curr : verts)
          {
             allVerts.insert(allVerts.end(), curr.getVerts().begin(), curr.getVerts().end());
             if (std::is_same<IndexT, uint16_t>::value)
@@ -184,7 +182,6 @@ namespace dmp
       }
 
       bool mValid = false;
-      std::string mName;
 
       Microsoft::WRL::ComPtr<ID3DBlob> vertexBufferCPU = nullptr;
       Microsoft::WRL::ComPtr<ID3DBlob> indexBufferCPU = nullptr;
@@ -201,6 +198,6 @@ namespace dmp
       size_t mIndexByteSize;
 
       public:
-         std::unordered_map<std::string, SubMesh> mSubMeshes;
+         std::vector<SubMesh> mSubMeshes;
    };
 }

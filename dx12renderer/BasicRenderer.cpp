@@ -56,7 +56,7 @@ HRESULT dmp::BasicRenderer::drawPre()
    auto passCBVHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mCBVHeap->GetGPUDescriptorHandleForHeapStart());
 
    passCBVHandle.Offset(passCBVIndex, mCbvSrvUavDescriptorSize);
-   mCommandList->SetGraphicsRootDescriptorTable(1, passCBVHandle);
+   mCommandList->SetGraphicsRootDescriptorTable(2, passCBVHandle);
 
    return S_OK;
 }
@@ -64,25 +64,34 @@ HRESULT dmp::BasicRenderer::drawPre()
 HRESULT dmp::BasicRenderer::drawImpl()
 {
    UINT objSize = (UINT)calcConstantBufferByteSize(sizeof(BasicObjectConstants));
-
+   int objectCount = (int)mRItems.size();
+   int matCount = (int) mMats.size();
    auto clist = mCommandList.Get();
 
-   for (auto & curr : mVger)
+   int i = 0;
+   for (auto & curr : mRItems)
    {
       clist->IASetVertexBuffers(0, 1, &curr->meshBuffer->vertexBufferView());
       clist->IASetIndexBuffer(&curr->meshBuffer->indexBufferView());
       clist->IASetPrimitiveTopology(curr->primitiveType);
 
-      UINT cbvIndex = mCurrFrameResourceIndex;
+      UINT cbvIndex = (mCurrFrameResourceIndex * objectCount) + i;
       auto handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mCBVHeap->GetGPUDescriptorHandleForHeapStart());
       handle.Offset(cbvIndex, mCbvSrvUavDescriptorSize);
 
       clist->SetGraphicsRootDescriptorTable(0, handle);
+
+      cbvIndex = mMatsCBVOffset + (mCurrFrameResourceIndex * matCount) + curr->matIndex;
+      auto mathandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mCBVHeap->GetGPUDescriptorHandleForHeapStart());
+      mathandle.Offset(cbvIndex, mCbvSrvUavDescriptorSize);
+      clist->SetGraphicsRootDescriptorTable(1, mathandle);
+
       clist->DrawIndexedInstanced(curr->indexCount,
                                   1,
                                   curr->startIndexLocation,
                                   curr->baseVertexLocation,
                                   0);
+      ++i;
    }
 
    return S_OK;
@@ -149,17 +158,21 @@ bool dmp::BasicRenderer::buildRootSignature()
    CD3DX12_DESCRIPTOR_RANGE objectCB;
    objectCB.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
 
-   CD3DX12_DESCRIPTOR_RANGE passCB;
-   passCB.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
+   CD3DX12_DESCRIPTOR_RANGE materialCB;
+   materialCB.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
 
-   CD3DX12_ROOT_PARAMETER params[2];
+   CD3DX12_DESCRIPTOR_RANGE passCB;
+   passCB.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2);
+
+   CD3DX12_ROOT_PARAMETER params[3];
 
    params[0].InitAsDescriptorTable(1, &objectCB);
-   params[1].InitAsDescriptorTable(1, &passCB);
+   params[1].InitAsDescriptorTable(1, &materialCB);
+   params[2].InitAsDescriptorTable(1, &passCB);
 
    // TODO: investigate CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC that is not defined in your copy of
    // cd3dx12.h
-   CD3DX12_ROOT_SIGNATURE_DESC rsd(2,
+   CD3DX12_ROOT_SIGNATURE_DESC rsd(3,
                                    params,
                                    0,
                                    nullptr,
@@ -208,82 +221,55 @@ bool dmp::BasicRenderer::buildShadersAndInputLayouts()
 }
 
 bool dmp::BasicRenderer::buildMeshBuffer()
-{
-   //std::vector<BasicVertex> verts = {
-   //   {DirectX::XMFLOAT4(-0.8f, -0.8f, 0.0f, 1.0f), DirectX::XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f)},
-   //   {DirectX::XMFLOAT4(-0.8f, 0.8f, 0.0f, 1.0f), DirectX::XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f)},
-   //   {DirectX::XMFLOAT4(0.8f, 0.8f, 0.0f, 1.0f), DirectX::XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f)},
-   //   {DirectX::XMFLOAT4(0.8f, -0.8f, 0.0f, 1.0f), DirectX::XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f)}
-   //};
-   //std::vector<uint16_t> idxs = {0, 1, 2, 2, 3, 0};
-   //MeshData<BasicVertex> md(verts, idxs, "helloSayer");
-   
+{   
    // TODO: barf; magic constants
-   auto models = loadModel("Voyager.lwo");
+   std::vector<MeshData<BasicVertex>> models;
 
-   
+   loadModel("Voyager.lwo", models, mMats);
 
-   //auto vger = std::accumulate(models.begin(),
-   //                              models.end(),
-   //                              MeshData<BasicVertex>(std::vector<BasicVertex>(), std::vector<uint16_t>(), "vger"),
-   //                              [](MeshData<BasicVertex> acc, MeshData<BasicVertex> x)
-   //{
-   //   auto offset = (uint16_t)acc.getVerts().size();
-   //   auto accV = acc.getVerts();
-   //   auto accI = acc.getI16();
-   //   auto name = acc.getName();
-
-   //   auto xV = x.getVerts();
-   //   auto xI = x.getI16();
-
-   //   for (auto & curr : xI) curr = curr + offset;
-
-   //   for (const auto & curr : xI) accI.push_back(curr);
-   //   for (const auto & curr : xV) accV.push_back(curr);
-
-   //   return MeshData<BasicVertex>(accV, accI, name);
-   //});
-
-   for (size_t i = 0; i < models.size(); ++i)
-   {
-      std::string name = "vger " + std::to_string(i);
-      models[i].setName(name);
-   }
-
-   std::vector<MeshData<BasicVertex>> mds = {};
-
-   mMeshBuffer = std::make_unique<MeshBuffer<BasicVertex, uint16_t>>("Guardian of the hellos", models, mDevice.Get(), mCommandList.Get());
+   mMeshBuffer = std::make_unique<MeshBuffer<BasicVertex, uint16_t>>(models, mDevice.Get(), mCommandList.Get());
 
    return true;
 }
 
 bool dmp::BasicRenderer::buildRenderItems()
 {
+   UINT index = 0;
    for (auto & curr : mMeshBuffer->mSubMeshes)
    {
       auto vger = std::make_unique<BasicRenderItem>();
-      auto submesh = curr.second;
       vger->meshBuffer = mMeshBuffer.get();
-      vger->indexCount = (UINT) submesh.indexCount;
-      vger->startIndexLocation = (UINT) submesh.startIndexOffset;
-      vger->baseVertexLocation = (UINT) submesh.startVertexOffset;
-      
-      //mVger[0]->meshBuffer = mMeshBuffer.get();
-      //mVger[0]->indexCount = (UINT) mVger[0]->meshBuffer->mSubMeshes["vger 0"].indexCount;
-      //mVger[0]->startIndexLocation = (UINT) mVger[0]->meshBuffer->mSubMeshes["vger 0"].startIndexOffset;
-      //mVger[0]->baseVertexLocation = (UINT) mVger[0]->meshBuffer->mSubMeshes["vger 0"].startVertexOffset;
+      vger->cbIndex = index;
+      vger->indexCount = (UINT) curr.indexCount;
+      vger->startIndexLocation = (UINT) curr.startIndexOffset;
+      vger->baseVertexLocation = (UINT) curr.startVertexOffset;
+      vger->matIndex = curr.matIndex;
 
-      mVger.push_back(std::move(vger));
+      mRItems.push_back(std::move(vger));
+      ++index;
    }
+
+   std::sort(mRItems.begin(), mRItems.end(),
+             [](std::unique_ptr<BasicRenderItem> & lhs, std::unique_ptr<BasicRenderItem> & rhs)
+   {
+      return lhs->matIndex < rhs->matIndex;
+   });
 
    return true;
 }
 
 bool dmp::BasicRenderer::buildFrameResources()
 {
+   expectTrue("|mMats| not 0", mMats.size() != 0);
+   expectTrue("|mRItems| not 0", mRItems.size() != 0);
+
    for (size_t i = 0; i < FRAME_RESOURCES_COUNT; ++i)
    {
-      mFrameResources.push_back(std::make_unique<FrameResource<BasicPassConstants, BasicObjectConstants>>(mDevice.Get(), 1, 1));
+      mFrameResources.push_back(std::make_unique<FrameResource<BasicPassConstants, BasicMaterial, BasicObjectConstants>>(mDevice.Get(),
+                                                                                                                         1, 
+                                                                                                                         (UINT) mMats.size(),
+                                                                                                                         (UINT) mRItems.size())); 
+
    }
 
    return true;
@@ -291,14 +277,17 @@ bool dmp::BasicRenderer::buildFrameResources()
 
 bool dmp::BasicRenderer::buildCBVDescriptorHeaps()
 {
-   UINT objCount = 1; // Just the triangle
+   UINT objCount = (UINT)mRItems.size();
+   UINT matCount = (UINT)mMats.size();
 
    // one descriptor per object for object constants
+   // one descriptor per material for material constants
    // 1 extra descriptor for pass constants
    // times 3 since we need this per frame resource
-   UINT descCount = (objCount + 1) * FRAME_RESOURCES_COUNT;
+   UINT descCount = (matCount + objCount + 1) * FRAME_RESOURCES_COUNT;
 
-   mPassCBVOffset = objCount * FRAME_RESOURCES_COUNT;
+   mMatsCBVOffset = objCount * FRAME_RESOURCES_COUNT;
+   mPassCBVOffset = (objCount + matCount) * FRAME_RESOURCES_COUNT;
 
    D3D12_DESCRIPTOR_HEAP_DESC dhd;
    dhd.NumDescriptors = descCount;
@@ -317,15 +306,13 @@ bool dmp::BasicRenderer::buildConstantBufferViews()
 {
    UINT objCBSize = (UINT)calcConstantBufferByteSize(sizeof(BasicObjectConstants));
 
-   UINT objCount = 1;
+   UINT objCount = (UINT) mRItems.size();
    
    for (size_t frameIndex = 0; frameIndex < FRAME_RESOURCES_COUNT; ++frameIndex)
    {
       auto objCB = mFrameResources[frameIndex]->objectCB->getBuffer();
 
-      // will only iterate once, but here for "documentation" purposes
-      // a _sufficiently_smart_compiler_ should optimize it out after all
-      
+     
       for (UINT i = 0; i < objCount; ++i)
       {
          D3D12_GPU_VIRTUAL_ADDRESS cbAddr = objCB->GetGPUVirtualAddress();
@@ -342,6 +329,35 @@ bool dmp::BasicRenderer::buildConstantBufferViews()
          D3D12_CONSTANT_BUFFER_VIEW_DESC cvd;
          cvd.BufferLocation = cbAddr;
          cvd.SizeInBytes = (UINT)objCBSize;
+
+         mDevice->CreateConstantBufferView(&cvd, handle);
+      }
+   }
+
+   auto matCBSize = calcConstantBufferByteSize(sizeof(BasicMaterial));
+   UINT matCount = (UINT)mMats.size();
+
+   for (size_t frameIndex = 0; frameIndex < FRAME_RESOURCES_COUNT; ++frameIndex)
+   {
+      auto objCB = mFrameResources[frameIndex]->materialCB->getBuffer();
+
+
+      for (UINT i = 0; i < matCount; ++i)
+      {
+         D3D12_GPU_VIRTUAL_ADDRESS cbAddr = objCB->GetGPUVirtualAddress();
+
+         // offset to the ith object constant buffer
+         cbAddr = cbAddr + (i * matCBSize);
+
+         // offset to the object cbv in the descriptor heap
+         int heapIndex = (int) (mMatsCBVOffset + ((frameIndex * matCount) + i));
+         // if we made it here, then this must have passed the previous null check
+         auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(mCBVHeap->GetCPUDescriptorHandleForHeapStart());
+         handle.Offset(heapIndex, mCbvSrvUavDescriptorSize);
+
+         D3D12_CONSTANT_BUFFER_VIEW_DESC cvd;
+         cvd.BufferLocation = cbAddr;
+         cvd.SizeInBytes = (UINT) matCBSize;
 
          mDevice->CreateConstantBufferView(&cvd, handle);
       }
@@ -486,7 +502,7 @@ bool dmp::BasicRenderer::updateImpl(const Timer & t)
 
    mCurrFrameResource->passCB->copyData(0, pc);
 
-   for (auto & curr : mVger)
+   for (auto & curr : mRItems)
    {
       curr->M = Matrix::CreateRotationY(theta)
          * Matrix::CreateRotationZ(-theta)
@@ -496,6 +512,7 @@ bool dmp::BasicRenderer::updateImpl(const Timer & t)
       curr->framesDirty = FRAME_RESOURCES_COUNT;
 
       auto & objCB = mCurrFrameResource->objectCB;
+      auto & matCB = mCurrFrameResource->materialCB;
 
       if (curr->framesDirty > 0) // which it will be
       {
@@ -504,9 +521,17 @@ bool dmp::BasicRenderer::updateImpl(const Timer & t)
          BasicObjectConstants oc;
          oc.M = curr->M.Transpose();
 
-         objCB->copyData(0, oc);
+         objCB->copyData(curr->cbIndex, oc);
 
          curr->framesDirty--;
+
+         BasicMaterial mc;
+         mc.ambient = mMats[curr->matIndex].ambient;
+         mc.diffuse = mMats[curr->matIndex].diffuse;
+         mc.specular = mMats[curr->matIndex].specular;
+         mc.shininess = mMats[curr->matIndex].shininess;
+
+         matCB->copyData(curr->matIndex, mc);
       }
    }
 
