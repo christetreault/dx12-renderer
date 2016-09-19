@@ -26,19 +26,26 @@ static void processMesh(std::vector<MeshData<BasicVertex>> & models,
 
    auto material = scene->mMaterials[mesh->mMaterialIndex];
 
-   aiColor3D ambient;
-   material->Get(AI_MATKEY_COLOR_AMBIENT, ambient);
-
+   
    aiColor3D diffuse;
    material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
 
-   aiColor3D specular;
-   material->Get(AI_MATKEY_COLOR_SPECULAR, specular);
+   aiColor3D ambient = aiColor3D(diffuse.r * 0.2f, diffuse.g * 0.2f, diffuse.b * 0.2f);
+   //material->Get(AI_MATKEY_COLOR_AMBIENT, ambient);
 
-   float shininess = 1.0f;
-   material->Get(AI_MATKEY_SHININESS, shininess);
+   aiColor3D specular = aiColor3D(std::min(diffuse.r * 2.0f, 1.0f), 
+                                  std::min(diffuse.g * 2.0f, 1.0f), 
+                                  std::min(diffuse.b * 2.0f, 1.0f));
+   //material->Get(AI_MATKEY_COLOR_SPECULAR, specular);
 
+   float shininess = 0.5f;
+   //material->Get(AI_MATKEY_SHININESS, shininess);
+
+   int shadingType;
+   material->Get(AI_MATKEY_SHADING_MODEL, shadingType);
    // TODO: handle the fact that models don't all use phong shading
+
+   auto color = mesh->mColors;
 
    BasicMaterial mat;
    mat.ambient = colorToVec4(ambient);

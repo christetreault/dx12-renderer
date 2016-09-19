@@ -55,7 +55,8 @@ PixelIn vertexShader(VertexIn vin)
    float4 colorLow = normalize(mul(vin.color, PVM));
 
    pin.pos = mul(vin.pos, PVM);
-   pin.color = lerp(colorLow, diffuse, squimbler);
+   //pin.color = lerp(colorLow, diffuse, squimbler);
+   pin.color = diffuse;
 
    return pin;
 }

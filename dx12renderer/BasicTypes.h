@@ -4,6 +4,12 @@
 
 namespace dmp
 {
+   struct BasicLight
+   {
+      DirectX::SimpleMath::Vector4 color;
+      DirectX::SimpleMath::Vector4 dir;
+   };
+
    struct BasicVertex
    {
       DirectX::XMFLOAT4 pos;
@@ -25,6 +31,7 @@ namespace dmp
       float farZ = 0.0f;
       float totalTime = 0.0f;
       float deltaTime = 0.0f;
+      BasicLight light;
    };
 
    struct BasicObjectConstants

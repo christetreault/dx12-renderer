@@ -12,7 +12,7 @@ dmp::BasicRenderer::BasicRenderer()
 dmp::BasicRenderer::~BasicRenderer()
 {}
 
-HRESULT dmp::BasicRenderer::drawPre()
+HRESULT dmp::BasicRenderer::drawImpl()
 {
    using namespace DirectX;
    auto allocator = mCurrFrameResource->allocator;
@@ -32,7 +32,13 @@ HRESULT dmp::BasicRenderer::drawPre()
                                                                        D3D12_RESOURCE_STATE_PRESENT,
                                                                        D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-   XMVECTORF32 clearColor = {mClearColor.x, mClearColor.y, mClearColor.z, mClearColor.w};
+   XMVECTORF32 clearColor = 
+   {
+      mClearColor.x * 0.5f, 
+      mClearColor.y * 0.5f, 
+      mClearColor.z * 0.5f, 
+      mClearColor.w
+   };
 
    mCommandList->ClearRenderTargetView(currentBackBufferView(),
                                        clearColor,
@@ -52,53 +58,13 @@ HRESULT dmp::BasicRenderer::drawPre()
 
    mCommandList->SetGraphicsRootSignature(mRootSignature.Get());
 
-   int passCBVIndex = mPassCBVOffset + mCurrFrameResourceIndex;
-   auto passCBVHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mCBVHeap->GetGPUDescriptorHandleForHeapStart());
+   mCurrFrameResource->passCB->bind(mCommandList.Get(),
+                                    mCBVHeap.Get(),
+                                    2,
+                                    0);
 
-   passCBVHandle.Offset(passCBVIndex, mCbvSrvUavDescriptorSize);
-   mCommandList->SetGraphicsRootDescriptorTable(2, passCBVHandle);
+   drawRItems();
 
-   return S_OK;
-}
-
-HRESULT dmp::BasicRenderer::drawImpl()
-{
-   UINT objSize = (UINT)calcConstantBufferByteSize(sizeof(BasicObjectConstants));
-   int objectCount = (int)mRItems.size();
-   int matCount = (int) mMats.size();
-   auto clist = mCommandList.Get();
-
-   int i = 0;
-   for (auto & curr : mRItems)
-   {
-      clist->IASetVertexBuffers(0, 1, &curr->meshBuffer->vertexBufferView());
-      clist->IASetIndexBuffer(&curr->meshBuffer->indexBufferView());
-      clist->IASetPrimitiveTopology(curr->primitiveType);
-
-      UINT cbvIndex = (mCurrFrameResourceIndex * objectCount) + i;
-      auto handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mCBVHeap->GetGPUDescriptorHandleForHeapStart());
-      handle.Offset(cbvIndex, mCbvSrvUavDescriptorSize);
-
-      clist->SetGraphicsRootDescriptorTable(0, handle);
-
-      cbvIndex = mMatsCBVOffset + (mCurrFrameResourceIndex * matCount) + curr->matIndex;
-      auto mathandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mCBVHeap->GetGPUDescriptorHandleForHeapStart());
-      mathandle.Offset(cbvIndex, mCbvSrvUavDescriptorSize);
-      clist->SetGraphicsRootDescriptorTable(1, mathandle);
-
-      clist->DrawIndexedInstanced(curr->indexCount,
-                                  1,
-                                  curr->startIndexLocation,
-                                  curr->baseVertexLocation,
-                                  0);
-      ++i;
-   }
-
-   return S_OK;
-}
-
-HRESULT dmp::BasicRenderer::drawPost()
-{
    mCommandList->ResourceBarrier(1,
                                  &CD3DX12_RESOURCE_BARRIER::Transition(currentBackBuffer(),
                                                                        D3D12_RESOURCE_STATE_RENDER_TARGET,
@@ -118,7 +84,45 @@ HRESULT dmp::BasicRenderer::drawPost()
    mCommandQueue->Signal(mFence.Get(), mFenceVal);
 
    return S_OK;
+
 }
+
+HRESULT dmp::BasicRenderer::drawRItems()
+{
+   UINT objSize = (UINT)calcConstantBufferByteSize(sizeof(BasicObjectConstants));
+   int objectCount = (int)mRItems.size();
+   int matCount = (int) mMats.size();
+   auto clist = mCommandList.Get();
+
+   int i = 0;
+   for (auto & curr : mRItems)
+   {
+      clist->IASetVertexBuffers(0, 1, &curr->meshBuffer->vertexBufferView());
+      clist->IASetIndexBuffer(&curr->meshBuffer->indexBufferView());
+      clist->IASetPrimitiveTopology(curr->primitiveType);
+
+      mCurrFrameResource->objectCB->bind(clist,
+                                         mCBVHeap.Get(),
+                                         0,
+                                         i);
+
+      mCurrFrameResource->materialCB->bind(clist,
+                                           mCBVHeap.Get(),
+                                           1,
+                                           (UINT)curr->matIndex);
+
+      clist->DrawIndexedInstanced(curr->indexCount,
+                                  1,
+                                  curr->startIndexLocation,
+                                  curr->baseVertexLocation,
+                                  0);
+      ++i;
+   }
+
+   return S_OK;
+}
+
+
 
 bool dmp::BasicRenderer::initImpl()
 {
@@ -130,9 +134,8 @@ bool dmp::BasicRenderer::initImpl()
    expectTrue("Load Shaders and build Input Layouts", buildShadersAndInputLayouts());
    expectTrue("Build mesh buffer and upload", buildMeshBuffer());
    expectTrue("Build render item", buildRenderItems());
-   expectTrue("Build frame resources", buildFrameResources());
    expectTrue("Build CBV descriptor heap", buildCBVDescriptorHeaps());
-   expectTrue("Build Constant Buffer Views", buildConstantBufferViews());
+   expectTrue("Build frame resources", buildFrameResources());
    expectTrue("Build PSOs", buildPSOs());
    
    Vector3 eye(0.0f, 0.0f, 5.0f);
@@ -225,7 +228,7 @@ bool dmp::BasicRenderer::buildMeshBuffer()
    // TODO: barf; magic constants
    std::vector<MeshData<BasicVertex>> models;
 
-   loadModel("Voyager.lwo", models, mMats);
+   loadModel("model//Voyager.lwo", models, mMats);
 
    mMeshBuffer = std::make_unique<MeshBuffer<BasicVertex, uint16_t>>(models, mDevice.Get(), mCommandList.Get());
 
@@ -263,12 +266,19 @@ bool dmp::BasicRenderer::buildFrameResources()
    expectTrue("|mMats| not 0", mMats.size() != 0);
    expectTrue("|mRItems| not 0", mRItems.size() != 0);
 
-   for (size_t i = 0; i < FRAME_RESOURCES_COUNT; ++i)
+   for (UINT i = 0; i < FRAME_RESOURCES_COUNT; ++i)
    {
-      mFrameResources.push_back(std::make_unique<FrameResource<BasicPassConstants, BasicMaterial, BasicObjectConstants>>(mDevice.Get(),
-                                                                                                                         1, 
-                                                                                                                         (UINT) mMats.size(),
-                                                                                                                         (UINT) mRItems.size())); 
+      mFrameResources.push_back(std::make_unique<FrameResource<BasicPassConstants, 
+                                BasicMaterial, 
+                                BasicObjectConstants>>(mDevice.Get(),
+                                                       mCBVHeap.Get(),
+                                                       mCbvSrvUavDescriptorSize,
+                                                       (UINT)1,
+                                                       (UINT)mPassCBVOffset + i,
+                                                       (UINT)mMats.size(),
+                                                       mMatsCBVOffset + (i * (UINT)mMats.size()),
+                                                       (UINT)mRItems.size(),
+                                                       (i * (UINT)mRItems.size())));
 
    }
 
@@ -298,90 +308,6 @@ bool dmp::BasicRenderer::buildCBVDescriptorHeaps()
    expectRes("Create CBV descriptor heaps",
              mDevice->CreateDescriptorHeap(&dhd,
                                            IID_PPV_ARGS(mCBVHeap.ReleaseAndGetAddressOf())));
-
-   return true;
-}
-
-bool dmp::BasicRenderer::buildConstantBufferViews()
-{
-   UINT objCBSize = (UINT)calcConstantBufferByteSize(sizeof(BasicObjectConstants));
-
-   UINT objCount = (UINT) mRItems.size();
-   
-   for (size_t frameIndex = 0; frameIndex < FRAME_RESOURCES_COUNT; ++frameIndex)
-   {
-      auto objCB = mFrameResources[frameIndex]->objectCB->getBuffer();
-
-     
-      for (UINT i = 0; i < objCount; ++i)
-      {
-         D3D12_GPU_VIRTUAL_ADDRESS cbAddr = objCB->GetGPUVirtualAddress();
-
-         // offset to the ith object constant buffer
-         cbAddr = cbAddr + (i * objCBSize);
-
-         // offset to the object cbv in the descriptor heap
-         int heapIndex = (int)((frameIndex * objCount) + i);
-         expectTrue("mCBVHeap not null", mCBVHeap);
-         auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(mCBVHeap->GetCPUDescriptorHandleForHeapStart());
-         handle.Offset(heapIndex, mCbvSrvUavDescriptorSize);
-
-         D3D12_CONSTANT_BUFFER_VIEW_DESC cvd;
-         cvd.BufferLocation = cbAddr;
-         cvd.SizeInBytes = (UINT)objCBSize;
-
-         mDevice->CreateConstantBufferView(&cvd, handle);
-      }
-   }
-
-   auto matCBSize = calcConstantBufferByteSize(sizeof(BasicMaterial));
-   UINT matCount = (UINT)mMats.size();
-
-   for (size_t frameIndex = 0; frameIndex < FRAME_RESOURCES_COUNT; ++frameIndex)
-   {
-      auto objCB = mFrameResources[frameIndex]->materialCB->getBuffer();
-
-
-      for (UINT i = 0; i < matCount; ++i)
-      {
-         D3D12_GPU_VIRTUAL_ADDRESS cbAddr = objCB->GetGPUVirtualAddress();
-
-         // offset to the ith object constant buffer
-         cbAddr = cbAddr + (i * matCBSize);
-
-         // offset to the object cbv in the descriptor heap
-         int heapIndex = (int) (mMatsCBVOffset + ((frameIndex * matCount) + i));
-         // if we made it here, then this must have passed the previous null check
-         auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(mCBVHeap->GetCPUDescriptorHandleForHeapStart());
-         handle.Offset(heapIndex, mCbvSrvUavDescriptorSize);
-
-         D3D12_CONSTANT_BUFFER_VIEW_DESC cvd;
-         cvd.BufferLocation = cbAddr;
-         cvd.SizeInBytes = (UINT) matCBSize;
-
-         mDevice->CreateConstantBufferView(&cvd, handle);
-      }
-   }
-
-   auto passCBSize = calcConstantBufferByteSize(sizeof(BasicPassConstants));
-
-   for (int frameIndex = 0; frameIndex < FRAME_RESOURCES_COUNT; ++frameIndex)
-   {
-      auto passCB = mFrameResources[frameIndex]->passCB->getBuffer();
-      D3D12_GPU_VIRTUAL_ADDRESS cbAddr = passCB->GetGPUVirtualAddress();
-
-      int heapIndex = mPassCBVOffset + frameIndex;
-      // if we made it here, then this must have passed the previous null check
-      auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(mCBVHeap->GetCPUDescriptorHandleForHeapStart());
-      handle.Offset(heapIndex, mCbvSrvUavDescriptorSize);
-
-      D3D12_CONSTANT_BUFFER_VIEW_DESC cvd;
-      cvd.BufferLocation = cbAddr;
-      cvd.SizeInBytes = (UINT)passCBSize;
-
-      mDevice->CreateConstantBufferView(&cvd, handle);
-
-   }
 
    return true;
 }
@@ -429,8 +355,11 @@ bool dmp::BasicRenderer::buildPSOs()
    return true;
 }
 
-bool dmp::BasicRenderer::updatePre(const Timer & t) // TODO: need a busy callback
+bool dmp::BasicRenderer::updateImpl(const Timer & t)
 {
+   using namespace DirectX;
+   using namespace DirectX::SimpleMath;
+
    mCurrFrameResourceIndex = (mCurrFrameResourceIndex + 1) % FRAME_RESOURCES_COUNT;
    mCurrFrameResource = mFrameResources[mCurrFrameResourceIndex].get();
 
@@ -443,13 +372,6 @@ bool dmp::BasicRenderer::updatePre(const Timer & t) // TODO: need a busy callbac
       CloseHandle(handle);
    }
 
-   return true;
-}
-
-bool dmp::BasicRenderer::updateImpl(const Timer & t)
-{
-   using namespace DirectX;
-   using namespace DirectX::SimpleMath;
 
    // Clear color
 
@@ -499,8 +421,10 @@ bool dmp::BasicRenderer::updateImpl(const Timer & t)
    pc.farZ = 1000.0f;
    pc.totalTime = t.time();
    pc.deltaTime = t.deltaTime();
+   pc.light.color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+   pc.light.dir = Vector4(1.0f, 0.0f, 0.0f, 0.0f);
 
-   mCurrFrameResource->passCB->copyData(0, pc);
+   mCurrFrameResource->passCB->update(0, pc);
 
    for (auto & curr : mRItems)
    {
@@ -521,7 +445,7 @@ bool dmp::BasicRenderer::updateImpl(const Timer & t)
          BasicObjectConstants oc;
          oc.M = curr->M.Transpose();
 
-         objCB->copyData(curr->cbIndex, oc);
+         objCB->update(curr->cbIndex, oc);
 
          curr->framesDirty--;
 
@@ -531,7 +455,7 @@ bool dmp::BasicRenderer::updateImpl(const Timer & t)
          mc.specular = mMats[curr->matIndex].specular;
          mc.shininess = mMats[curr->matIndex].shininess;
 
-         matCB->copyData(curr->matIndex, mc);
+         matCB->update((UINT)curr->matIndex, mc);
       }
    }
 

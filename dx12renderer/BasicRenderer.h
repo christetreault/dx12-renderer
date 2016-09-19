@@ -4,10 +4,11 @@
 #include "BasicTypes.h"
 #include "Mesh.h"
 #include "FrameResource.h"
+#include "Timer.h"
 
 namespace dmp
 {
-   class BasicRenderer : public BaseRenderer
+   class BasicRenderer : public BaseRenderer<Timer>
    {
    public:
       BasicRenderer(HWND windowHandle, int width, int height) :
@@ -20,8 +21,7 @@ namespace dmp
       ~BasicRenderer();
    private:
       HRESULT drawImpl();
-      HRESULT drawPre();
-      HRESULT drawPost();
+      HRESULT drawRItems();
       bool initImpl();
 
       bool buildRootSignature();
@@ -48,14 +48,11 @@ namespace dmp
       UINT mMatsCBVOffset = 0;
       UINT mPassCBVOffset = 0;
 
-      bool buildConstantBufferViews();
-
       bool buildPSOs();
       std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> mPSOs;
       const std::string opaqueKey = "opaque";
       const std::string wireframeKey = "wireframe";
 
-      bool updatePre(const Timer & t) override;
       FrameResource<BasicPassConstants, BasicMaterial, BasicObjectConstants> * mCurrFrameResource = nullptr;
       int mCurrFrameResourceIndex = 0;
 
