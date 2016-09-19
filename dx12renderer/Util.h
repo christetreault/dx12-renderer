@@ -57,24 +57,6 @@ namespace dmp
    {
       return (unaligned + 255) & ~255;
    }
-
-   Microsoft::WRL::ComPtr<ID3DBlob> readShaderBinary(const std::string & path);
-
-   Microsoft::WRL::ComPtr<ID3D12Resource> createDefaultBuffer(ID3D12Device * dev,
-                                                              ID3D12GraphicsCommandList * clist,
-                                                              const void * data,
-                                                              size_t byteSize,
-                                                              Microsoft::WRL::ComPtr<ID3D12Resource> & uploadBuf);
-
-   inline DirectX::XMFLOAT4X4 identity4x4()
-   {
-      return DirectX::XMFLOAT4X4(
-         1.0f, 0.0f, 0.0f, 0.0f,
-         0.0f, 1.0f, 0.0f, 0.0f,
-         0.0f, 0.0f, 1.0f, 0.0f,
-         0.0f, 0.0f, 0.0f, 1.0f
-      );
-   }
 }
 
 #ifndef expect

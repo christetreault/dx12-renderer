@@ -5,6 +5,7 @@
 #include "Mesh.h"
 #include "FrameResource.h"
 #include "Timer.h"
+#include "Shader.h"
 
 namespace dmp
 {
@@ -28,7 +29,7 @@ namespace dmp
       Microsoft::WRL::ComPtr<ID3D12RootSignature> mRootSignature;
 
       bool buildShadersAndInputLayouts();
-      std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3DBlob>> mShaders;
+      std::unordered_map<std::string, Shader> mShaders;
       const std::string vertexShaderFile = "BasicVertexShader.cso";
       const std::string pixelShaderFile = "BasicPixelShader.cso";
       std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;

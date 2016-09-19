@@ -146,6 +146,7 @@
     <ClCompile Include="BasicModel.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="BasicRenderer.cpp" />
+    <ClCompile Include="Shader.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
     </ClCompile>
@@ -158,10 +159,12 @@
     <ClInclude Include="BasicTypes.h" />
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="d3dx12.h" />
+    <ClInclude Include="DefaultBuffer.h" />
     <ClInclude Include="FrameResource.h" />
     <ClInclude Include="BaseRenderer.h" />
     <ClInclude Include="BasicRenderer.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="Shader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="UploadBuffer.h" />

@@ -209,8 +209,8 @@ bool dmp::BasicRenderer::buildRootSignature()
 
 bool dmp::BasicRenderer::buildShadersAndInputLayouts()
 {
-   mShaders[vertexShaderFile] = readShaderBinary(vertexShaderFile);
-   mShaders[pixelShaderFile] = readShaderBinary(pixelShaderFile);
+   mShaders.insert(std::make_pair(vertexShaderFile, Shader(vertexShaderFile)));
+   mShaders.insert(std::make_pair(pixelShaderFile, Shader(pixelShaderFile)));
 
    mInputLayout =
    {
@@ -317,16 +317,8 @@ bool dmp::BasicRenderer::buildPSOs()
    D3D12_GRAPHICS_PIPELINE_STATE_DESC psd = {};
    psd.InputLayout = {mInputLayout.data(), (UINT) mInputLayout.size()};
    psd.pRootSignature = mRootSignature.Get();
-   psd.VS =
-   {
-      reinterpret_cast<BYTE*>(mShaders[vertexShaderFile]->GetBufferPointer()),
-      mShaders[vertexShaderFile]->GetBufferSize()
-   };
-   psd.PS =
-   {
-      reinterpret_cast<BYTE*>(mShaders[pixelShaderFile]->GetBufferPointer()),
-      mShaders[pixelShaderFile]->GetBufferSize()
-   };
+   psd.VS = mShaders[vertexShaderFile];
+   psd.PS = mShaders[pixelShaderFile];
 
    psd.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
    psd.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "stdafx.h"
+#include "DefaultBuffer.h"
 
 namespace dmp
 {
@@ -104,9 +105,9 @@ namespace dmp
       D3D12_VERTEX_BUFFER_VIEW vertexBufferView() const
       {
          D3D12_VERTEX_BUFFER_VIEW vbv;
-         vbv.BufferLocation = vertexBufferGPU->GetGPUVirtualAddress();
-         vbv.StrideInBytes = sizeof(VertexT);
-         vbv.SizeInBytes = (UINT)mVertexByteSize;
+         vbv.BufferLocation = mVertexBuffer->getGPUAddress();
+         vbv.StrideInBytes = mVertexBuffer->getDataTypeSize();
+         vbv.SizeInBytes = mVertexBuffer->getByteSize();
 
          return vbv;
       }
@@ -114,9 +115,9 @@ namespace dmp
       D3D12_INDEX_BUFFER_VIEW indexBufferView() const
       {
          D3D12_INDEX_BUFFER_VIEW ibv;
-         ibv.BufferLocation = indexBufferGPU->GetGPUVirtualAddress();
+         ibv.BufferLocation = mIndexBuffer->getGPUAddress();
          ibv.Format = mIdxFormat;
-         ibv.SizeInBytes = (UINT)mIndexByteSize;
+         ibv.SizeInBytes = mIndexBuffer->getByteSize();
 
          return ibv;
       }
@@ -162,40 +163,16 @@ namespace dmp
             }
          }
 
-         mVertexByteSize = allVerts.size() * sizeof(VertexT);
-         mIndexByteSize = allIdxs.size() * sizeof(IndexT);
-
-         auto allVertsByteSize = allVerts.size() * sizeof(VertexT);
-         expectRes("Create vertex blob",
-                   D3DCreateBlob(allVertsByteSize,
-                                 vertexBufferCPU.ReleaseAndGetAddressOf()));
-         CopyMemory(vertexBufferCPU->GetBufferPointer(), allVerts.data(), allVertsByteSize);
-
-         auto allIdxsByteSize = allIdxs.size() * sizeof(IndexT);
-         expectRes("Create index blob",
-                   D3DCreateBlob(allIdxsByteSize,
-                                 indexBufferCPU.ReleaseAndGetAddressOf()));
-         CopyMemory(indexBufferCPU->GetBufferPointer(), allIdxs.data(), allIdxsByteSize);
-
-         vertexBufferGPU = createDefaultBuffer(dev, clist, allVerts.data(), allVertsByteSize, vertexBufferUploader);
-         indexBufferGPU = createDefaultBuffer(dev, clist, allIdxs.data(), allIdxsByteSize, indexBufferUploader);
+         mIndexBuffer = std::make_unique<DefaultBuffer<IndexT>>(allIdxs, dev, clist);
+         mVertexBuffer = std::make_unique<DefaultBuffer<VertexT>>(allVerts, dev, clist);
       }
 
       bool mValid = false;
 
-      Microsoft::WRL::ComPtr<ID3DBlob> vertexBufferCPU = nullptr;
-      Microsoft::WRL::ComPtr<ID3DBlob> indexBufferCPU = nullptr;
-
-      Microsoft::WRL::ComPtr<ID3D12Resource> vertexBufferGPU = nullptr;
-      Microsoft::WRL::ComPtr<ID3D12Resource> indexBufferGPU = nullptr;
-
-      Microsoft::WRL::ComPtr<ID3D12Resource> vertexBufferUploader = nullptr;
-      Microsoft::WRL::ComPtr<ID3D12Resource> indexBufferUploader = nullptr;
+      std::unique_ptr<DefaultBuffer<IndexT>> mIndexBuffer = nullptr;
+      std::unique_ptr<DefaultBuffer<VertexT>> mVertexBuffer = nullptr;
 
       DXGI_FORMAT mIdxFormat;
-
-      size_t mVertexByteSize;
-      size_t mIndexByteSize;
 
       public:
          std::vector<SubMesh> mSubMeshes;
