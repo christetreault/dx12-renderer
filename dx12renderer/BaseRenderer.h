@@ -55,10 +55,10 @@ namespace dmp
 
    protected:
 
-      // update hooks
+      // update hook
       virtual bool updateImpl(const StateT & t) { return true; }
 
-      // resize hooks
+      // resize hook
       virtual HRESULT resizeImpl(int width, int height, bool force = false)
       {
          // make sure the size actually changed
@@ -165,16 +165,12 @@ namespace dmp
          return S_OK;
       }
 
-      // draw hooks
-      virtual HRESULT drawPre() { return S_OK; }
+      // draw hook
       virtual HRESULT drawImpl() = 0;
-      virtual HRESULT drawPost() { return S_OK; }
 
       // derived classes should call this in their constructor
       void init()
       {
-         expectTrue("init preHook", initPre());
-
          expectTrue("mWindowHandle not null", mWindowHandle);
          expectTrue("Init Renderer Base", initBase());
          expectTrue("Init MSAA", initMsaa());
@@ -183,16 +179,10 @@ namespace dmp
          expectTrue("Create Descriptor Heaps", createDescriptorHeaps());
 
          expectTrue("init impl", initImpl());
-         expectTrue("init postHook", initPost());
 
          mReady = true;
          resize(mWidth, mHeight, true);
       }
-
-      // this will be called by init and need not be called by the derived class
-      virtual bool initPre() { return true; }
-      virtual bool initImpl() = 0;
-      virtual bool initPost() { return true; }
 
       HRESULT recreateSwapChain()
       {
@@ -333,6 +323,9 @@ namespace dmp
       D3D12_RECT mScissorRect;
 
    private:
+      // this will be called by init and need not be called by the derived class
+      virtual bool initImpl() = 0;
+
       bool mReady = false;
       bool initBase()
       {

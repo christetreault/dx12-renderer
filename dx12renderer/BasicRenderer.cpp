@@ -122,8 +122,6 @@ HRESULT dmp::BasicRenderer::drawRItems()
    return S_OK;
 }
 
-
-
 bool dmp::BasicRenderer::initImpl()
 {
    using namespace DirectX::SimpleMath;
