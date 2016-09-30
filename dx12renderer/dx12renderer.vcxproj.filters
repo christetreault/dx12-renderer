@@ -116,9 +116,6 @@
     <ClInclude Include="CommittedDefaultBuffer.h">
       <Filter>Buffer\Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DefaultBuffer.h">
-      <Filter>Buffer\Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="UploadBuffer.h">
       <Filter>Buffer\Header Files</Filter>
     </ClInclude>
@@ -132,6 +129,9 @@
       <Filter>Buffer\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CommittedVertexBuffer.h">
+      <Filter>Buffer\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CommittedIndexBuffer.h">
       <Filter>Buffer\Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,7 +1,9 @@
 #pragma once
 
 #include "stdafx.h"
-#include "DefaultBuffer.h"
+#include "CommittedVertexBuffer.h"
+#include "CommittedIndexBuffer.h"
+#include "DX12Buffer.h"
 
 namespace dmp
 {
@@ -102,25 +104,10 @@ namespace dmp
 
       ~MeshBuffer() {}
       
-      D3D12_VERTEX_BUFFER_VIEW vertexBufferView() const
-      {
-         D3D12_VERTEX_BUFFER_VIEW vbv;
-         vbv.BufferLocation = mVertexBuffer->getGPUAddress();
-         vbv.StrideInBytes = mVertexBuffer->getDataTypeSize();
-         vbv.SizeInBytes = mVertexBuffer->getByteSize();
+      
 
-         return vbv;
-      }
-
-      D3D12_INDEX_BUFFER_VIEW indexBufferView() const
-      {
-         D3D12_INDEX_BUFFER_VIEW ibv;
-         ibv.BufferLocation = mIndexBuffer->getGPUAddress();
-         ibv.Format = mIdxFormat;
-         ibv.SizeInBytes = mIndexBuffer->getByteSize();
-
-         return ibv;
-      }
+      CommittedVertexBuffer<VertexT> * vertexBuffer() { return mVertexBuffer.get(); }
+      CommittedIndexBuffer<IndexT>  * indexBuffer() { return mIndexBuffer.get(); }
 
    private:
       void init(const std::vector<MeshData<VertexT>> & verts, 
@@ -163,14 +150,17 @@ namespace dmp
             }
          }
 
-         mIndexBuffer = std::make_unique<DefaultBuffer<IndexT>>(allIdxs, dev, clist);
-         mVertexBuffer = std::make_unique<DefaultBuffer<VertexT>>(allVerts, dev, clist);
+         DX12Buffer::WriteInfo wi;
+         wi.commandList = clist;
+         mVertexBuffer = std::make_unique<CommittedVertexBuffer<VertexT>>(allVerts, wi, dev);
+         mIndexBuffer = std::make_unique<CommittedIndexBuffer<IndexT>>(allIdxs, wi, dev);
       }
 
       bool mValid = false;
 
-      std::unique_ptr<DefaultBuffer<IndexT>> mIndexBuffer = nullptr;
-      std::unique_ptr<DefaultBuffer<VertexT>> mVertexBuffer = nullptr;
+      std::unique_ptr<CommittedIndexBuffer<IndexT>> mIndexBuffer = nullptr;
+
+      std::unique_ptr<CommittedVertexBuffer<VertexT>> mVertexBuffer = nullptr;
 
       DXGI_FORMAT mIdxFormat;
 

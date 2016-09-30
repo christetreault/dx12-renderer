@@ -4,6 +4,7 @@
 #include "UploadBuffer.h"
 #include "Mesh.h"
 #include "BasicModel.h"
+#include "CommittedVertexBuffer.h"
 
 dmp::BasicRenderer::BasicRenderer()
 {}
@@ -97,8 +98,14 @@ HRESULT dmp::BasicRenderer::drawRItems()
    int i = 0;
    for (auto & curr : mRItems)
    {
-      clist->IASetVertexBuffers(0, 1, &curr->meshBuffer->vertexBufferView());
-      clist->IASetIndexBuffer(&curr->meshBuffer->indexBufferView());
+      //clist->IASetVertexBuffers(0, 1, &curr->meshBuffer->vertexBufferView());
+      VertexBindInfo vbi;
+      vbi.commandList = clist;
+      vbi.startSlot = 0;
+      curr->meshBuffer->vertexBuffer()->bind(vbi);
+
+      //clist->IASetIndexBuffer(&curr->meshBuffer->indexBufferView());
+      curr->meshBuffer->indexBuffer()->bind({clist});
       clist->IASetPrimitiveTopology(curr->primitiveType);
 
       mCurrFrameResource->objectCB->bind(clist,

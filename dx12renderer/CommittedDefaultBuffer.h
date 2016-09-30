@@ -54,7 +54,7 @@ namespace dmp
                               &CD3DX12_RESOURCE_BARRIER::Transition(mGPUBuffer.Get(),
                                                                     D3D12_RESOURCE_STATE_COMMON,
                                                                     D3D12_RESOURCE_STATE_COPY_DEST));
-         UpdateSubresources<1>(wi.commandListclist, 
+         UpdateSubresources<1>(wi.commandList, 
                                mGPUBuffer.Get(), 
                                mUploader.Get(), 
                                0, 0, 1, &srd);
@@ -93,10 +93,10 @@ namespace dmp
                    dev
                    ->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
                                              D3D12_HEAP_FLAG_NONE,
-                                             &D3D12_RESOURCE_DESC::Buffer(byteSize),
+                                             &CD3DX12_RESOURCE_DESC::Buffer(byteSize),
                                              D3D12_RESOURCE_STATE_GENERIC_READ,
                                              nullptr,
-                                             IID_PPV_ARGS(mUploader.ReleaseAndGetAddressOf)));
+                                             IID_PPV_ARGS(mUploader.ReleaseAndGetAddressOf())));
       }
    };
 }

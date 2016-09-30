@@ -11,7 +11,7 @@ namespace dmp
       virtual size_t alignment() = 0;
       virtual size_t size() = 0;
       virtual void bind(const BindInfoT & bindInfo) = 0;
-      virtual void unbind(const BindInfoT & bindInfo)
+      virtual void unbind(const BindInfoT & bindInfo) = 0;
    protected:
       ~Buffer() {}
    };
@@ -32,6 +32,6 @@ namespace dmp
    public:
       virtual void write(size_t offset, const WriteInfoT & wi, DataT * val, size_t numElems) = 0;
    protected:
-      ~ReadBuffer() {}
+      ~WriteBuffer() {}
    };
 }
