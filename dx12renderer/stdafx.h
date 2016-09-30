@@ -31,6 +31,7 @@
 #include <array>
 #include <unordered_map>
 #include <numeric>
+#include <set>
 
 // DMP headers
 #include "Util.h"

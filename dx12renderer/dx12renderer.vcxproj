@@ -152,14 +152,19 @@
     </ClCompile>
     <ClCompile Include="Timer.cpp" />
     <ClCompile Include="Util.cpp" />
+    <ClCompile Include="VoxelRenderer\VoxelRenderer.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BasicModel.h" />
     <ClInclude Include="BasicTypes.h" />
+    <ClInclude Include="Buffer.h" />
+    <ClInclude Include="CommittedDefaultBuffer.h" />
+    <ClInclude Include="CommittedVertexBuffer.h" />
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DefaultBuffer.h" />
+    <ClInclude Include="DX12Buffer.h" />
     <ClInclude Include="FrameResource.h" />
     <ClInclude Include="BaseRenderer.h" />
     <ClInclude Include="BasicRenderer.h" />
@@ -169,6 +174,8 @@
     <ClInclude Include="Timer.h" />
     <ClInclude Include="UploadBuffer.h" />
     <ClInclude Include="Util.h" />
+    <ClInclude Include="VoxelRenderer\VoxelRenderer.h" />
+    <ClInclude Include="VoxelRenderer\VoxelTypes.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
@@ -181,6 +188,14 @@
     <FxCompile Include="BasicVertexShader.hlsl">
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename).cso</ObjectFileOutput>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vertexShader</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="VoxelRenderer\VoxelPixelShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="VoxelRenderer\VoxelVertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
     </FxCompile>

@@ -41,6 +41,7 @@ namespace dmp
       }
 
    private:
+      bool mValid = false;
       UINT mNumElems;
       UINT mBaseOffset;
       UINT mDescriptorSize;

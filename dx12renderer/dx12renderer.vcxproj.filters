@@ -25,6 +25,21 @@
     <Filter Include="Base Types">
       <UniqueIdentifier>{3c97d23d-f055-4c67-9e47-43de1d6c945f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="VoxelRenderer">
+      <UniqueIdentifier>{77ab04c1-6cdf-49bb-94eb-8da725aaa355}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VoxelRenderer\Headers">
+      <UniqueIdentifier>{7ddf5905-1da6-4c8c-9de1-c4519510e493}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VoxelRenderer\Shaders">
+      <UniqueIdentifier>{85b65713-f569-43f7-ac53-4a4b7b8283e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Buffer">
+      <UniqueIdentifier>{ee4d66be-e25b-4a00-85e3-ed14d583e918}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Buffer\Header Files">
+      <UniqueIdentifier>{ba9a73b6-e2b3-4768-a859-427e782ebea8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BasicRenderer.cpp">
@@ -51,12 +66,12 @@
     <ClCompile Include="Shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="VoxelRenderer\VoxelRenderer.cpp">
+      <Filter>VoxelRenderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FrameResource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="UploadBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BasicRenderer.h">
@@ -89,14 +104,35 @@
     <ClInclude Include="d3dx12.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ConstantBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="VoxelRenderer\VoxelRenderer.h">
+      <Filter>VoxelRenderer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="VoxelRenderer\VoxelTypes.h">
+      <Filter>VoxelRenderer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="CommittedDefaultBuffer.h">
+      <Filter>Buffer\Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="DefaultBuffer.h">
-      <Filter>Header Files</Filter>
+      <Filter>Buffer\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UploadBuffer.h">
+      <Filter>Buffer\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DX12Buffer.h">
+      <Filter>Buffer\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Buffer.h">
+      <Filter>Buffer\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConstantBuffer.h">
+      <Filter>Buffer\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CommittedVertexBuffer.h">
+      <Filter>Buffer\Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -105,6 +141,12 @@
     </FxCompile>
     <FxCompile Include="BasicVertexShader.hlsl">
       <Filter>BasicRenderer\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VoxelRenderer\VoxelPixelShader.hlsl">
+      <Filter>VoxelRenderer\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VoxelRenderer\VoxelVertexShader.hlsl">
+      <Filter>VoxelRenderer\Shaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

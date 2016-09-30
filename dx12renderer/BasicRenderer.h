@@ -60,8 +60,6 @@ namespace dmp
       bool updateImpl(const Timer & t) override;
       DirectX::XMFLOAT4 mClearColor;
 
-      HRESULT resizeImpl(int width, int height, bool force = false) override;
-      DirectX::SimpleMath::Matrix mP;
       DirectX::SimpleMath::Matrix mV;
    };
 

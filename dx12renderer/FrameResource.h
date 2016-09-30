@@ -46,8 +46,8 @@ namespace dmp
       Microsoft::WRL::ComPtr<ID3D12CommandAllocator> allocator;
       uint64_t fenceVal = 0;
       
-      std::unique_ptr<ConstantBuffer<PassConstantT>> passCB;
-      std::unique_ptr<ConstantBuffer<MaterialConstantT>> materialCB;
-      std::unique_ptr<ConstantBuffer<ObjectConstantT>> objectCB;
+      std::unique_ptr<ConstantBuffer<PassConstantT>> passCB = nullptr;
+      std::unique_ptr<ConstantBuffer<MaterialConstantT>> materialCB = nullptr;
+      std::unique_ptr<ConstantBuffer<ObjectConstantT>> objectCB = nullptr;
    };
 }

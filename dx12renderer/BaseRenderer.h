@@ -162,6 +162,8 @@ namespace dmp
 
          mScissorRect = {0, 0, mWidth, mHeight};
 
+         mP = DirectX::SimpleMath::Matrix::CreatePerspectiveFieldOfView(0.25 * DirectX::XM_PI, getAspectRatio(), 1.0f, 1000.0f);
+
          return S_OK;
       }
 
@@ -321,6 +323,8 @@ namespace dmp
       Microsoft::WRL::ComPtr<ID3D12Resource> mDepthStencilBuffer;
       D3D12_VIEWPORT mViewport;
       D3D12_RECT mScissorRect;
+
+      DirectX::SimpleMath::Matrix mP; // TODO: Do I care about orthographic projection?
 
    private:
       // this will be called by init and need not be called by the derived class

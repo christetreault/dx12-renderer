@@ -451,15 +451,3 @@ bool dmp::BasicRenderer::updateImpl(const Timer & t)
 
    return true;
 }
-
-HRESULT dmp::BasicRenderer::resizeImpl(int width, int height, bool force)
-{
-   using namespace DirectX::SimpleMath;
-   BaseRenderer::resizeImpl(width, height, force);
-
-   if (!force) return S_OK;
-
-   mP = Matrix::CreatePerspectiveFieldOfView(0.25 * DirectX::XM_PI, getAspectRatio(), 1.0f, 1000.0f);
-
-   return S_OK;
-}
